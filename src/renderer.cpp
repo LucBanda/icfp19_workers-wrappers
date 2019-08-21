@@ -8,14 +8,13 @@
 #define MAP_RES 3000
 
 #define BOULDER_COL al_map_rgb(100, 100, 100)
-#define BACKGROUND_COL al_map_rgb(200, 200, 200)
-#define CRATER_COL al_map_rgb(200, 100, 100)
 #define ME_COL al_map_rgb(200, 0, 0)
-#define SAT_COL al_map_rgb(200, 0, 0)
-#define WAYPT_COL al_map_rgb(200, 0, 0)
-#define BLACK al_map_rgb(0, 0, 0)
-#define TANK_COL al_map_rgb(0, 0, 100)
+#define FASTWHEEL_COL al_map_rgb(150, 50, 50)
+#define MYSTERIOUS_COL al_map_rgb(50, 50, 200)
+#define DRILL_COL al_map_rgb(50, 200, 50)
+#define MANIP_COL al_map_rgb(220, 220, 0)
 #define WHITE_COL al_map_rgb(250, 250, 250)
+
 #define TO_SCREEN(c)  SCREEN_W * (real(c) + 1) / SCALE, SCREEN_H - SCREEN_H * (imag(c) + 1) / SCALE
 
 #define SHAPE_SCALE	1.
@@ -65,6 +64,24 @@ void renderer::draw() {
 
 	complex<double> robot_centered_pos(mine->robot.real() + 0.5, mine->robot.imag() + 0.5);
 	al_draw_filled_circle(TO_SCREEN(robot_centered_pos), 10, ME_COL);
+
+	for (auto it = mine->drill_boosters.begin(); it != mine->drill_boosters.end(); ++it){
+		complex<double> booster_centered_pos(it->real() + 0.5, it->imag() + 0.5);
+		al_draw_filled_circle(TO_SCREEN(booster_centered_pos), 10, DRILL_COL);
+	}
+	for (auto it = mine->mystere_boosters.begin(); it != mine->mystere_boosters.end(); ++it){
+		complex<double> booster_centered_pos(it->real() + 0.5, it->imag() + 0.5);
+		al_draw_filled_circle(TO_SCREEN(booster_centered_pos), 10, MYSTERIOUS_COL);
+	}
+	for (auto it = mine->fastwheels_boosters.begin(); it != mine->fastwheels_boosters.end(); ++it){
+		complex<double> booster_centered_pos(it->real() + 0.5, it->imag() + 0.5);
+		al_draw_filled_circle(TO_SCREEN(booster_centered_pos), 10, FASTWHEEL_COL);
+	}
+	for (auto it = mine->manipulators_boosters.begin(); it != mine->manipulators_boosters.end(); ++it){
+		complex<double> booster_centered_pos(it->real() + 0.5, it->imag() + 0.5);
+		al_draw_filled_circle(TO_SCREEN(booster_centered_pos), 10, MANIP_COL);
+	}
+
 }
 
 enum MYKEYS { KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_R };

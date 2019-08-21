@@ -6,7 +6,7 @@ static string get_next_tuple_token(string *line) {
 	size_t pos = line->find(delimiter);
 	token = line->substr(0, pos);
 	line->erase(0, pos + delimiter.length());
-	cout << "get next tuple " << token << ", " << *line << endl;
+	//cout << "get next tuple " << token << ", " << *line << endl;
 	return token;
 }
 
@@ -25,9 +25,9 @@ static position parse_position(string positionstring) {
 	string arg1, arg2;
 	string delimiter = ",";
 	size_t delimpos = positionstring.find(delimiter);
-	arg1 = positionstring.substr(0, delimpos);
-	arg2 = positionstring.substr(delimpos + delimiter.length(), positionstring.length() - delimiter.length() - 1);
-	cout << "args from position " << arg1 << ", " << arg2 << endl;
+	arg1 = positionstring.substr(1, delimpos - 1);
+	arg2 = positionstring.substr(delimpos + delimiter.length(), positionstring.length() - delimpos - 2);
+	//cout << "args from position " << arg1 << ", " << arg2 << endl;
 	return position(atoi(arg1.c_str()), atoi(arg2.c_str()));
 
 }
@@ -48,7 +48,8 @@ static vector<position> parse_token_list(string line) {
 	tokenpos = t_line.find(open_delimiter);
 	tokenend = t_line.find(close_delimiter);
 	while (tokenpos != t_line.npos) {
-		token = t_line.substr(tokenpos + open_delimiter.length(), tokenend - open_delimiter.length());
+		token = t_line.substr(tokenpos, tokenend + 1);
+		//cout << token << endl;
 		list.push_back(parse_position(token));
 		t_line.erase(0, tokenend + close_delimiter.length() + open_delimiter.length());
 		tokenpos = t_line.find(open_delimiter);
@@ -77,13 +78,38 @@ mine_state::mine_state(string filename) {
 		std::string token;
 		std::string line;
 		getline(file, line);
-		cout << line << endl;
+		//cout << line << endl;
 		// remove beginning
 		mine_map = parse_token_list(get_next_tuple_token(&line));
-		cout << "########################################"<< endl;
+		//cout << "########################################"<< endl;
 		robot = parse_token_list(get_next_tuple_token(&line))[0];
-		cout << "########################################"<< endl;
+		//cout << "########################################"<< endl;
 		obstacles = parse_list_of_token_lists(get_next_tuple_token(&line));
+
+		string boosters = get_next_tuple_token(&line);
+		while (boosters.length() > 0){
+			string booster = get_next_tuple_polygon(&boosters);
+			switch (booster[0]){
+			case 'X':
+				booster.erase(0,1);
+				mystere_boosters.push_back(parse_position(booster));
+				break;
+			case 'B':
+				booster.erase(0,1);
+				manipulators_boosters.push_back(parse_position(booster));
+				break;
+			case 'L':
+				booster.erase(0,1);
+				drill_boosters.push_back(parse_position(booster));
+				break;
+			case 'F':
+				booster.erase(0,1);
+				fastwheels_boosters.push_back(parse_position(booster));
+				break;
+			default:
+				cout << "unhandled booster: " << booster << endl;
+			}
+		}
 	}
 }
 
