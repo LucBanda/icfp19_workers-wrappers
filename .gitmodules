@@ -1,0 +1,3 @@
+[submodule "openGA"]
+	path = openGA
+	url = https://github.com/Arash-codedev/openGA.git

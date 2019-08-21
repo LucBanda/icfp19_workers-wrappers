@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"complex": "cpp",
+			"iomanip": "cpp",
+			"ostream": "cpp",
+			"iostream": "cpp",
+			"ios": "cpp"
+		}
+	}
+}
