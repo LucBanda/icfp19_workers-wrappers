@@ -22,7 +22,6 @@ class renderer {
 	bool scale_edited;
 	int FPS;
 	float draw_decimation;
-	bool debug_relative_position;
 	ALLEGRO_FONT *debug_font;
 
    public:

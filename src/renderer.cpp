@@ -14,6 +14,7 @@
 #define DRILL_COL al_map_rgb(50, 200, 50)
 #define MANIP_COL al_map_rgb(220, 220, 0)
 #define WHITE_COL al_map_rgb(250, 250, 250)
+#define YELLOW_COL al_map_rgb(200, 200, 50)
 
 #define TO_SCREEN(c)  SCREEN_W * (real(c) + 1) / SCALE, SCREEN_H - SCREEN_H * (imag(c) + 1) / SCALE
 
@@ -26,27 +27,28 @@ using namespace std;
 
 renderer::renderer() {
 	SCALE = 1;
-	draw_decimation = 20;
-	FPS = 60 * draw_decimation;
+	draw_decimation = 1;
+	FPS = 1000 * draw_decimation;
 	scale_edited = false;
 }
 
 double start_radius = 0;
 void renderer::draw() {
 
+	SCALE = max(mine->max_size_x + 2, mine->max_size_y + 2);
 	al_draw_filled_rectangle(0, 0, SCREEN_W, SCREEN_H, BOULDER_COL);
+	float *vertice_array;
+	int i;
 
-	float *vertice_array = (float*)calloc(mine->mine_map.size() * 2, sizeof(int));
-	int i = 0;
+	vertice_array = (float*)calloc(mine->mine_map.size() * 2, sizeof(int));
+	i = 0;
 	for (auto it = mine->mine_map.begin(); it != mine->mine_map.end(); ++it) {
 		position to_screen_pos(TO_SCREEN(*it));
 		vertice_array[(2 * i)] = to_screen_pos.real();
 		vertice_array[(2 * i + 1)] = to_screen_pos.imag();
-		if (SCALE < it->real() + 2) SCALE = it->real() + 2;
-		if (SCALE < it->imag() + 2) SCALE = it->imag() + 2;
 		i++;
 	}
-	al_draw_filled_polygon(vertice_array, mine->mine_map.size(), WHITE_COL);
+	al_draw_filled_polygon(vertice_array, mine->mine_map.size(), YELLOW_COL);
 	free(vertice_array);
 
 	for (auto obstacle = mine->obstacles.begin(); obstacle != mine->obstacles.end(); ++obstacle){
@@ -62,29 +64,37 @@ void renderer::draw() {
 		free(vertice_array);
 	}
 
+	for(auto it=mine->non_validated_tiles.begin(); it != mine->non_validated_tiles.end(); ++it) {
+		al_draw_filled_rectangle(TO_SCREEN(*it), TO_SCREEN(*it + position(1,1)), WHITE_COL);
+	}
+
 	complex<double> robot_centered_pos(mine->robot.real() + 0.5, mine->robot.imag() + 0.5);
 	al_draw_filled_circle(TO_SCREEN(robot_centered_pos), 10, ME_COL);
+	for (auto it = mine->relative_manipulators.begin(); it != mine->relative_manipulators.end(); ++it) {
+		complex<double> manip_centered_pos(mine->robot.real() + it->real() + 0.5, mine->robot.imag() + it->imag() + 0.5);
+		al_draw_circle(TO_SCREEN(manip_centered_pos), 2., ME_COL, 2.);
+	}
 
-	for (auto it = mine->drill_boosters.begin(); it != mine->drill_boosters.end(); ++it){
+	for (auto it = mine->drill_boosters.begin(); it != mine->drill_boosters.end(); ++it) {
 		complex<double> booster_centered_pos(it->real() + 0.5, it->imag() + 0.5);
 		al_draw_filled_circle(TO_SCREEN(booster_centered_pos), 10, DRILL_COL);
 	}
-	for (auto it = mine->mystere_boosters.begin(); it != mine->mystere_boosters.end(); ++it){
+	for (auto it = mine->mystere_boosters.begin(); it != mine->mystere_boosters.end(); ++it) {
 		complex<double> booster_centered_pos(it->real() + 0.5, it->imag() + 0.5);
 		al_draw_filled_circle(TO_SCREEN(booster_centered_pos), 10, MYSTERIOUS_COL);
 	}
-	for (auto it = mine->fastwheels_boosters.begin(); it != mine->fastwheels_boosters.end(); ++it){
+	for (auto it = mine->fastwheels_boosters.begin(); it != mine->fastwheels_boosters.end(); ++it) {
 		complex<double> booster_centered_pos(it->real() + 0.5, it->imag() + 0.5);
 		al_draw_filled_circle(TO_SCREEN(booster_centered_pos), 10, FASTWHEEL_COL);
 	}
-	for (auto it = mine->manipulators_boosters.begin(); it != mine->manipulators_boosters.end(); ++it){
+	for (auto it = mine->manipulators_boosters.begin(); it != mine->manipulators_boosters.end(); ++it) {
 		complex<double> booster_centered_pos(it->real() + 0.5, it->imag() + 0.5);
 		al_draw_filled_circle(TO_SCREEN(booster_centered_pos), 10, MANIP_COL);
 	}
 
 }
 
-enum MYKEYS { KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_R };
+enum MYKEYS { KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_R};
 void renderer::mainLoop(void *params) {
 	ALLEGRO_DISPLAY *display = NULL;
 	ALLEGRO_EVENT_QUEUE *event_queue = NULL;
@@ -147,12 +157,12 @@ void renderer::mainLoop(void *params) {
 		al_wait_for_event(event_queue, &ev);
 
 		if (ev.type == ALLEGRO_EVENT_TIMER) {
-			doexit = idle(idle_param);
-			i += 1;
-			if (i > draw_decimation) {
-				redraw = true;
-				i = 0;
-			}
+			redraw = true;
+			//i += 1;
+			//if (i > draw_decimation) {
+				doexit = idle(idle_param);
+			//	i = 0;
+			//}
 		} else if (ev.type == ALLEGRO_EVENT_DISPLAY_CLOSE) {
 			break;
 		} else if (ev.type == ALLEGRO_EVENT_KEY_DOWN) {
@@ -207,12 +217,36 @@ void renderer::mainLoop(void *params) {
 
 				case ALLEGRO_KEY_R:
 					key[KEY_R] = false;
-					debug_relative_position = !debug_relative_position;
 					break;
 
 				case ALLEGRO_KEY_ESCAPE:
 					doexit = true;
 					break;
+
+				case ALLEGRO_KEY_W:
+					mine->apply_command("W");
+					break;
+
+				case ALLEGRO_KEY_S:
+					mine->apply_command("S");
+					break;
+
+				case ALLEGRO_KEY_A:
+					mine->apply_command("A");
+					break;
+
+				case ALLEGRO_KEY_D:
+					mine->apply_command("D");
+					break;
+
+				case ALLEGRO_KEY_Q:
+					mine->apply_command("Q");
+					break;
+
+				case ALLEGRO_KEY_E:
+					mine->apply_command("E");
+					break;
+
 			}
 		} else {
 		}

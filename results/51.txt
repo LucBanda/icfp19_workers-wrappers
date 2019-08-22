@@ -1,0 +1,1 @@
+step	cost_avg	cost_best	solution_best

@@ -68,6 +68,39 @@ static vector<vector<position>> parse_list_of_token_lists(string line) {
 	return ret;
 }
 
+
+static bool PointInPolygon(position point, vector<position> polygon) {
+  int i, j, nvert = polygon.size();
+  bool c = false;
+
+  for(i = 0, j = nvert - 1; i < nvert; j = i++) {
+    if( ( (polygon[i].imag() > point.imag() ) != (polygon[j].imag() > point.imag()) ) &&
+        (point.real() < (polygon[j].real() - polygon[i].real()) * (point.imag() - polygon[i].imag()) / (polygon[j].imag() - polygon[i].imag()) + polygon[i].real())
+      )
+      c = !c;
+  }
+
+  return c;
+}
+
+mine_state::mine_state(mine_state *base_mine) {
+	mine_map = base_mine->mine_map;
+	robot = base_mine->robot;
+	obstacles = base_mine->obstacles;
+	mystere_boosters = base_mine->mystere_boosters;
+	drill_boosters = base_mine->drill_boosters;
+	fastwheels_boosters = base_mine->fastwheels_boosters;
+	manipulators_boosters = base_mine->manipulators_boosters;
+	max_size_x = base_mine->max_size_x;
+	max_size_y = base_mine->max_size_y;
+	non_validated_tiles = base_mine->non_validated_tiles;
+	relative_manipulators = base_mine->relative_manipulators;
+	owned_fastwheels_boosters = 0;
+	owned_drill_boosters = 0;
+	owned_manipulators_boosters = 0;
+	time_step = 0;
+}
+
 mine_state::mine_state(string filename) {
 	ifstream file(filename);
     if (!file.good()) {
@@ -111,21 +144,112 @@ mine_state::mine_state(string filename) {
 			}
 		}
 	}
+	max_size_x = 0;
+	max_size_y = 0;
+	for (auto it = mine_map.begin(); it != mine_map.end(); ++it) {
+		if (max_size_x < it->real()) max_size_x = it->real();
+		if (max_size_y < it->imag()) max_size_y = it->imag();
+	}
+	for (int i = 0; i < max_size_x; i++) {
+		for (int j = 0; j < max_size_y; j++) {
+			position cur(i,j);
+			if (is_point_valid(cur)) {
+				non_validated_tiles.push_back(cur);
+			}
+		}
+	}
+	relative_manipulators.push_back(position(1, 0));
+	relative_manipulators.push_back(position(1, 1));
+	relative_manipulators.push_back(position(1, -1));
+	//validate points
+	for (auto it = relative_manipulators.begin(); it != relative_manipulators.end(); ++it) {
+		auto pos_to_remove = find(non_validated_tiles.begin(), non_validated_tiles.end(), *it + robot);
+		if (pos_to_remove != non_validated_tiles.end()) non_validated_tiles.erase(pos_to_remove);
+	}
+	owned_fastwheels_boosters = 0;
+	owned_drill_boosters = 0;
+	owned_manipulators_boosters = 0;
+	time_step = 0;
 }
 
 mine_state::~mine_state() {}
 
 
-bool PointInPolygon(position point, vector<position> polygon) {
-  int i, j, nvert = polygon.size();
-  bool c = false;
 
-  for(i = 0, j = nvert - 1; i < nvert; j = i++) {
-    if( ( (polygon[i].real() >= point.imag() ) != (polygon[j].imag() >= point.imag()) ) &&
-        (point.real() <= (polygon[j].real() - polygon[i].real()) * (point.imag() - polygon[i].imag()) / (polygon[j].imag() - polygon[i].imag()) + polygon[i].real())
-      )
-      c = !c;
-  }
+bool mine_state::is_point_valid(position point) {
+	bool is_valid = false;
+	if (PointInPolygon(point, mine_map)) {
+		is_valid = true;
+		for (auto it = obstacles.begin(); it != obstacles.end(); ++it) {
+			if (PointInPolygon(point, *it)) {
+				is_valid = false;
+			}
+		}
+	}
+	return is_valid;
+}
 
-  return c;
+void mine_state::apply_command(string command) {
+	bool invalid_move = false;
+
+	for (unsigned int i = 0; i < command.length(); i++){
+		time_step++;
+		position new_pos(-1, -1);
+
+		switch (command[i]) {
+		case 'W':
+			new_pos = robot + position(0,1);
+			break;
+		case 'S':
+			new_pos = robot + position(0,-1);
+			break;
+		case 'A':
+			new_pos = robot + position(-1,0);
+			break;
+		case 'D':
+			new_pos = robot + position(1,0);
+			break;
+		case 'E':
+			for (unsigned int j = 0; j < relative_manipulators.size(); j++) {
+				relative_manipulators[j] = position(relative_manipulators[j].imag(), -relative_manipulators[j].real());
+			}
+			break;
+		case 'Q':
+			for (unsigned int j = 0; j < relative_manipulators.size(); j++) {
+				relative_manipulators[j] = position(-relative_manipulators[j].imag(), relative_manipulators[j].real());
+			}
+			break;
+		}
+		//move
+		if (new_pos != position(-1, -1) && is_point_valid(new_pos)) {
+			robot = new_pos;
+		} else {
+			invalid_move = true;
+		}
+
+		//validate tiles
+		for (auto it = relative_manipulators.begin(); it != relative_manipulators.end(); ++it) {
+			auto pos_to_remove = find(non_validated_tiles.begin(), non_validated_tiles.end(), *it + robot);
+			if (pos_to_remove != non_validated_tiles.end()) non_validated_tiles.erase(pos_to_remove);
+		}
+		//collect manipulator booster
+		auto pos_to_remove = find(manipulators_boosters.begin(), manipulators_boosters.end(), robot);
+		if (pos_to_remove != manipulators_boosters.end()){
+			manipulators_boosters.erase(pos_to_remove);
+			owned_manipulators_boosters += 1;
+		}
+		//collect fast booster
+		pos_to_remove = find(fastwheels_boosters.begin(), fastwheels_boosters.end(), robot);
+		if (pos_to_remove != fastwheels_boosters.end()){
+			fastwheels_boosters.erase(pos_to_remove);
+			owned_fastwheels_boosters += 1;
+		}
+		//collect manipulator booster
+		pos_to_remove = find(drill_boosters.begin(), drill_boosters.end(), robot);
+		if (pos_to_remove != drill_boosters.end()){
+			drill_boosters.erase(pos_to_remove);
+			owned_drill_boosters += 1;
+		}
+
+	}
 }

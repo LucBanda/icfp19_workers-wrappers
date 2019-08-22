@@ -4,14 +4,19 @@
 #include "openga.hpp"
 #include "renderer.h"
 #include "sys/time.h"
+#include "fileparser.h"
 
 struct main_status {
 	mine_state *mine;
+	agent *ag;
 };
 
 bool idle(void* user_param) {
-	//struct main_status* status = (struct main_status*)user_param;
-
+	struct main_status* status = (struct main_status*)user_param;
+	mine_state *mine = status->mine;
+	string command = status->ag->execution.substr(0,1);
+	status->ag->execution.erase(0, 1);
+	mine->apply_command(command);
 	return false;
 }
 
@@ -67,26 +72,25 @@ int main(int argc, char** argv) {
 		if (instance == -1) padded_filename << "./part-1-examples/example-01.desc";
 		 else padded_filename << "./part-1-initial/prob-"<< setw(3) << setfill('0') << instance << ".desc";
 		mine_state *mine = new mine_state(padded_filename.str());
+
 		//ag = new agent(instance);
-
-		/*if (load_result) {
-			if (fileName == "") fileName = "./results/" + to_string(instance) + ".txt";
-			map = parse_result(fileName);
-			ag->set_execution_map(&map);
-			cout <<"max time step for evaluation " << ag->max_time_step << endl;
-		}*/
-
-		/*if (resume_from != 0) {
-			ag->run(resume_from);
-		}*/
 
 		render->set_mine(mine);
 		status.mine = mine;
+		status.ag =  new agent(mine);
+
+		if (load_result) {
+			if (fileName == "") fileName = "./results/" + to_string(instance) + ".txt";
+			string execution = parse_result(fileName);
+			status.ag->set_execution_map(execution);
+		}
+
 		render->idle = &idle;
 		render->idle_param = &status;
 		render->mainLoop(NULL);
 
 		delete render;
+		delete status.ag;
 		delete mine;
 
 		if (!do_all) return 0;
