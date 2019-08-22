@@ -99,6 +99,7 @@ mine_state::mine_state(mine_state *base_mine) {
 	owned_drill_boosters = 0;
 	owned_manipulators_boosters = 0;
 	time_step = 0;
+	distance_loss = 0;
 }
 
 mine_state::mine_state(string filename) {
@@ -170,6 +171,7 @@ mine_state::mine_state(string filename) {
 	owned_drill_boosters = 0;
 	owned_manipulators_boosters = 0;
 	time_step = 0;
+	distance_loss = 0;
 }
 
 mine_state::~mine_state() {}
@@ -205,9 +207,12 @@ vector<string> mine_state::get_next_valid_command() {
 }
 
 string mine_state::strip(string commands) {
-	string ret = commands;
+	string ret = "";
 
 	for (auto it = commands.begin(); it != commands.end();++it) {
+		if (non_validated_tiles.size() == 0) {
+			return ret;
+		}
 		switch (*it) {
 			case 'W':
 				if (is_point_valid(robot + position(0,1)))
@@ -238,7 +243,6 @@ void mine_state::apply_command(string command) {
 	bool invalid_move = false;
 
 	for (unsigned int i = 0; i < command.length(); i++){
-		time_step++;
 		position new_pos(-1, -1);
 
 		switch (command[i]) {
@@ -258,25 +262,44 @@ void mine_state::apply_command(string command) {
 			for (unsigned int j = 0; j < relative_manipulators.size(); j++) {
 				relative_manipulators[j] = position(relative_manipulators[j].imag(), -relative_manipulators[j].real());
 			}
+			time_step++;
 			break;
 		case 'Q':
 			for (unsigned int j = 0; j < relative_manipulators.size(); j++) {
 				relative_manipulators[j] = position(-relative_manipulators[j].imag(), relative_manipulators[j].real());
 			}
+			time_step++;
 			break;
 		}
 		//move
 		if (new_pos != position(-1, -1) && is_point_valid(new_pos)) {
 			robot = new_pos;
+			time_step++;
 		} else {
 			invalid_move = true;
 		}
 
 		//validate tiles
+		bool validated = false;
 		for (auto it = relative_manipulators.begin(); it != relative_manipulators.end(); ++it) {
 			auto pos_to_remove = find(non_validated_tiles.begin(), non_validated_tiles.end(), *it + robot);
-			if (pos_to_remove != non_validated_tiles.end()) non_validated_tiles.erase(pos_to_remove);
+			if (pos_to_remove != non_validated_tiles.end()) {
+				non_validated_tiles.erase(pos_to_remove);
+				validated = true;
+			}
 		}
+		if (validated == false && !invalid_move)
+			distance_loss ++;
+		//get distance loss
+		/*double min_distance = 300000;
+		if (non_validated_tiles.size() != 0) {
+			for (auto it = non_validated_tiles.begin(); it != non_validated_tiles.end(); ++it) {
+				if (min_distance > abs(robot - *it))
+					min_distance = abs(robot - *it);
+			}
+			distance_loss += min_distance;
+		}*/
+		//cout << distance_loss << endl;
 		//collect manipulator booster
 		auto pos_to_remove = find(manipulators_boosters.begin(), manipulators_boosters.end(), robot);
 		if (pos_to_remove != manipulators_boosters.end()){

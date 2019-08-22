@@ -11,6 +11,7 @@ class mine_state {
 	mine_state(string filename);
 	~mine_state();
 
+	double distance_loss;
 	int time_step;
 	bool is_point_valid(position point);
 	void apply_command(string command);

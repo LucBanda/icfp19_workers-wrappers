@@ -28,7 +28,7 @@ using namespace std;
 renderer::renderer() {
 	SCALE = 1;
 	draw_decimation = 1;
-	FPS = 2000 * draw_decimation;
+	FPS = 500 * draw_decimation;
 	scale_edited = false;
 }
 
@@ -188,16 +188,16 @@ void renderer::mainLoop(void *params) {
 			switch (ev.keyboard.keycode) {
 				case ALLEGRO_KEY_UP:
 					key[KEY_UP] = false;
-					draw_decimation = draw_decimation + draw_decimation / 4.;
-					FPS = 60 * draw_decimation;
+//					draw_decimation = draw_decimation + draw_decimation / 4.;
+					FPS =  FPS + FPS / 4;
 					al_set_timer_speed(timer, 1.0 / FPS);
 					break;
 
 				case ALLEGRO_KEY_DOWN:
 					key[KEY_DOWN] = false;
-					if (draw_decimation <= 1) break;
-					draw_decimation = draw_decimation - draw_decimation / 4.;
-					FPS = 60 * draw_decimation;
+					//if (draw_decimation <= 1) break;
+					//draw_decimation = draw_decimation - draw_decimation / 4.;
+					FPS =  FPS - FPS / 4;
 					al_set_timer_speed(timer, 1.0 / FPS);
 					break;
 

@@ -17,6 +17,6 @@ int agent::run() {
 }
 
 int agent::get_cost() {
-	int score = mine->non_validated_tiles.size() * 2000 + mine->time_step;
+	int score = mine->non_validated_tiles.size() * 2000 + mine->distance_loss + mine->time_step;
 	return score;
 }

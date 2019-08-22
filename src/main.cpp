@@ -89,6 +89,8 @@ int main(int argc, char** argv) {
 		render->idle_param = &status;
 		render->mainLoop(NULL);
 
+		cout << "time_step " << status.mine->time_step << endl;
+
 		delete render;
 		delete status.ag;
 		delete mine;

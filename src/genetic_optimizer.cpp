@@ -41,24 +41,26 @@ MySolution genetic_optimizer::mutate(const MySolution& X_base,
 				  double shrink_scale) {
 	MySolution X_new;
 	X_new.execution = X_base.execution;
-	for (int j = 0; j < base_mine->non_validated_tiles.size() / 100 * shrink_scale; j++) {
+	for (int j = 0; j < 3; j++) {
 		int action = floor(3. * rnd01());
 		if (action == 0) {
 			//replace
-			int pos = floor((X_base.execution.length()) * rnd01());
-			int poss = floor((sizeof(possibilities)) * rnd01());
-			X_new.execution[pos] = possibilities[poss];
+			if (X_new.execution.length() > 0) {
+				int pos = floor((X_new.execution.length()) * rnd01());
+				int poss = floor((sizeof(possibilities)) * rnd01());
+				X_new.execution[pos] = possibilities[poss];
+			}
 		} else if (action == 1) {
 			//insert
-			int pos = floor((X_base.execution.length()) * rnd01());
+			int pos = floor((X_new.execution.length()) * rnd01());
 			int poss = floor((sizeof(possibilities)) * rnd01());
-			X_new.execution = X_base.execution;
 			X_new.execution.insert(pos, to_string(possibilities[poss]));
 		} else  {
 			//remove
-			int pos = floor((X_base.execution.length()) * rnd01());
-			X_new.execution = X_base.execution;
-			X_new.execution.erase(pos);
+			if (X_new.execution.length() > 0) {
+				int pos = floor((X_new.execution.length()) * rnd01());
+				X_new.execution.erase(pos);
+			}
 		}
 	}
 	/*mine_state tester(base_mine);
@@ -77,12 +79,21 @@ MySolution genetic_optimizer::crossover(const MySolution& X1, const MySolution& 
 	if (1) {
 		int keep1 = rnd01() * 2;
 		int keep2 = rnd01() * 2;
+		int keep3 = rnd01() * 2;
+		int keep4 = rnd01() * 2;
+
+		if (!keep1 && !keep2 && !keep3){
+			keep1 = 1;
+		}
 		if (keep1)
-			X_new.execution += X1.execution.substr(0, X1.execution.length() * proportion1)
-							+ X2.execution.substr(X2.execution.length() * proportion1, X2.execution.length() * proportion2);
+			X_new.execution += X1.execution.substr(0, X1.execution.length() * proportion1);
 		if (keep2)
-			X_new.execution += X1.execution.substr(X1.execution.length() * proportion2, X1.execution.length() * proportion3)
-							+ X2.execution.substr(X2.execution.length() * proportion3, X2.execution.length());
+			X_new.execution += X2.execution.substr(X2.execution.length() * proportion1, X2.execution.length() * proportion2);
+		if (keep3)
+			X_new.execution += X1.execution.substr(X1.execution.length() * proportion2, X1.execution.length() * proportion3);
+		if (keep4)
+			X_new.execution += X2.execution.substr(X2.execution.length() * proportion3, X2.execution.length());
+
 	} else {
 		for (auto it1 = X1.execution.begin(), it2 = X2.execution.begin(); it1 != X1.execution.end() && it2!= X2.execution.end(); ++it1, ++it2) {
 			if ((*it1 == 'W') && (*it2 == 'S'))
@@ -134,7 +145,7 @@ void genetic_optimizer::SO_report_generation(
 	output_file << generation_number << "   \t" << std::setw(11)
 				<< -last_generation.average_cost << "   \t" << std::setw(11)
 				<< -last_generation.best_total_cost << "\t" << std::setw(20)
-				<< best_genes.to_string() << "\n";
+				<< best_genes.to_string(this) << "\n";
 	output_file.flush();
 	output_file.close();
 }
@@ -191,9 +202,9 @@ bool genetic_optimizer::solve(int population_size) {
 	ga_obj.SO_report_generation = std::bind(&genetic_optimizer::SO_report_generation, this, _1, _2, _3);
 	ga_obj.crossover_fraction = 0.7;
 	ga_obj.mutation_rate = 0.3;
-	ga_obj.best_stall_max = 50;
-	ga_obj.average_stall_max = 50;
-	ga_obj.elite_count = 10;
+	ga_obj.best_stall_max = 150;
+	ga_obj.average_stall_max = 20;
+	ga_obj.elite_count = 30;
 	EA::StopReason reason = ga_obj.solve();
 	cout << "The problem is optimized in " << timer.toc()
 			<< " seconds." << endl;

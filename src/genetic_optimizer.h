@@ -44,8 +44,9 @@ class genetic_optimizer {
 struct MySolution {
 	string execution;
 
-	string to_string() const {
-		return "*" + execution;
+	string to_string(genetic_optimizer * optim) const {
+        mine_state mine(optim->base_mine);
+		return "*" + mine.strip(execution);
 	}
 };
 
