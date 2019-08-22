@@ -13,10 +13,14 @@ using std::string;
 
 void genetic_optimizer::init_genes(MySolution& p, const std::function<double(void)>& rnd01) {
 	int size = base_mine->non_validated_tiles.size() * 5;
+	mine_state test_mine(base_mine);
+
 	string gene = "";
 	for (int i = 0; i < size; i++) {
-		int poss = (sizeof(possibilities) - 1) * rnd01();
-		gene += possibilities[poss];
+		vector<string> valid_possibilities = test_mine.get_next_valid_command();
+		int poss = (valid_possibilities.size()) * rnd01();
+		gene += valid_possibilities[poss];
+		test_mine.apply_command(string(1, gene.back()));
 	}
 	p.execution = gene;
 }
@@ -37,7 +41,7 @@ MySolution genetic_optimizer::mutate(const MySolution& X_base,
 				  double shrink_scale) {
 	MySolution X_new;
 	X_new.execution = X_base.execution;
-	for (int j = 0; j < 3; j++) {
+	for (int j = 0; j < base_mine->non_validated_tiles.size() / 100 * shrink_scale; j++) {
 		int action = floor(3. * rnd01());
 		if (action == 0) {
 			//replace
@@ -46,18 +50,20 @@ MySolution genetic_optimizer::mutate(const MySolution& X_base,
 			X_new.execution[pos] = possibilities[poss];
 		} else if (action == 1) {
 			//insert
-			int pos = floor((X_base.execution.length() + 1) * rnd01());
-			int poss = floor((sizeof(possibilities) + 1) * rnd01());
+			int pos = floor((X_base.execution.length()) * rnd01());
+			int poss = floor((sizeof(possibilities)) * rnd01());
 			X_new.execution = X_base.execution;
 			X_new.execution.insert(pos, to_string(possibilities[poss]));
 		} else  {
 			//remove
-			int pos = floor((X_base.execution.length() + 1) * rnd01());
+			int pos = floor((X_base.execution.length()) * rnd01());
 			X_new.execution = X_base.execution;
 			X_new.execution.erase(pos);
 		}
 	}
-	return X_new;
+	/*mine_state tester(base_mine);
+	X_new.execution = tester.strip(X_new.execution);
+	*/return X_new;
 }
 
 MySolution genetic_optimizer::crossover(const MySolution& X1, const MySolution& X2,
@@ -66,15 +72,38 @@ MySolution genetic_optimizer::crossover(const MySolution& X1, const MySolution& 
 	double proportion1 = rnd01() / 3;
 	double proportion2 = proportion1 + rnd01() / 3;
 	double proportion3 = proportion2 + rnd01() / 3;
+	//int action = floor(2. * rnd01());
 
-	int keep1 = rnd01() * 2;
-	int keep2 = rnd01() * 2;
-	if (keep1)
-		X_new.execution += X1.execution.substr(0, X1.execution.length() * proportion1)
-						+ X2.execution.substr(X2.execution.length() * proportion1, X2.execution.length() * proportion2);
-	if (keep2)
-		X_new.execution += X1.execution.substr(X1.execution.length() * proportion2, X1.execution.length() * proportion3)
-						+ X2.execution.substr(X2.execution.length() * proportion3, X2.execution.length());
+	if (1) {
+		int keep1 = rnd01() * 2;
+		int keep2 = rnd01() * 2;
+		if (keep1)
+			X_new.execution += X1.execution.substr(0, X1.execution.length() * proportion1)
+							+ X2.execution.substr(X2.execution.length() * proportion1, X2.execution.length() * proportion2);
+		if (keep2)
+			X_new.execution += X1.execution.substr(X1.execution.length() * proportion2, X1.execution.length() * proportion3)
+							+ X2.execution.substr(X2.execution.length() * proportion3, X2.execution.length());
+	} else {
+		for (auto it1 = X1.execution.begin(), it2 = X2.execution.begin(); it1 != X1.execution.end() && it2!= X2.execution.end(); ++it1, ++it2) {
+			if ((*it1 == 'W') && (*it2 == 'S'))
+				continue;
+			if ((*it1 == 'S') && (*it2 == 'W'))
+				continue;
+			if ((*it1 == 'D') && (*it2 == 'A'))
+				continue;
+			if ((*it1 == 'A') && (*it2 == 'D'))
+				continue;
+			int whichone = floor(2 * rnd01());
+			if (whichone)
+				X_new.execution += *it1;
+			else
+				X_new.execution += *it2;
+		}
+
+	}
+
+	/*mine_state tester(base_mine);
+	X_new.execution = tester.strip(X_new.execution);*/
 	return X_new;
 }
 

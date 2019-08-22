@@ -28,7 +28,7 @@ using namespace std;
 renderer::renderer() {
 	SCALE = 1;
 	draw_decimation = 1;
-	FPS = 1000 * draw_decimation;
+	FPS = 2000 * draw_decimation;
 	scale_edited = false;
 }
 
@@ -149,8 +149,6 @@ void renderer::mainLoop(void *params) {
 	al_clear_to_color(al_map_rgb(0, 0, 0));
 	al_flip_display();
 	al_start_timer(timer);
-
-	int i = 0;
 
 	while (!doexit) {
 		ALLEGRO_EVENT ev;

@@ -189,6 +189,51 @@ bool mine_state::is_point_valid(position point) {
 	return is_valid;
 }
 
+vector<string> mine_state::get_next_valid_command() {
+	vector<string> ret;
+	ret.push_back("Q");
+	ret.push_back("E");
+	if (is_point_valid(robot + position(1,0)))
+		ret.push_back("D");
+	if (is_point_valid(robot + position(-1,0)))
+		ret.push_back("A");
+	if (is_point_valid(robot + position(0,1)))
+		ret.push_back("W");
+	if (is_point_valid(robot + position(0,-1)))
+		ret.push_back("S");
+	return ret;
+}
+
+string mine_state::strip(string commands) {
+	string ret = commands;
+
+	for (auto it = commands.begin(); it != commands.end();++it) {
+		switch (*it) {
+			case 'W':
+				if (is_point_valid(robot + position(0,1)))
+					ret += "W";
+				break;
+			case 'D':
+				if (is_point_valid(robot + position(1,0)))
+					ret += "D";
+				break;
+			case 'S':
+				if (is_point_valid(robot + position(0,-1)))
+					ret += "S";
+				break;
+			case 'A':
+				if (is_point_valid(robot + position(-1,0)))
+					ret += "A";
+				break;
+			default:
+				ret += *it;
+				break;
+		}
+		apply_command(string(1,*it));
+	}
+	return ret;
+}
+
 void mine_state::apply_command(string command) {
 	bool invalid_move = false;
 

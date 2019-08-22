@@ -14,6 +14,9 @@ class mine_state {
 	int time_step;
 	bool is_point_valid(position point);
 	void apply_command(string command);
+	vector<string> get_next_valid_command();
+	string strip(string commands);
+
 	vector<position> non_validated_tiles;
 
 	position robot;
