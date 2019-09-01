@@ -12,26 +12,25 @@ using std::endl;
 using std::string;
 
 void genetic_optimizer::init_genes(MySolution& p, const std::function<double(void)>& rnd01) {
-	int size = base_mine->non_validated_tiles.size() * 5;
-	mine_state test_mine(base_mine);
+	vector<ListDigraph::Node> list_node = navigator->get_node_list();
 
-	string gene = "";
-	for (int i = 0; i < size; i++) {
-		vector<string> valid_possibilities = test_mine.get_next_valid_command();
-		int poss = (valid_possibilities.size()) * rnd01();
-		gene += valid_possibilities[poss];
-		test_mine.apply_command(string(1, gene.back()));
-	}
-	p.execution = gene;
+	std::reverse(list_node.begin(), list_node.end());
+	std::shuffle(std::begin(list_node), std::end(list_node), std::default_random_engine());
+
+	p.node_list = list_node;
 }
 
 bool genetic_optimizer::eval_solution(const MySolution& p, MyMiddleCost& c) {
 	mine_state mine(base_mine);
-	agent executeur(&mine);
 
-	executeur.set_execution_map(p.execution);
-	executeur.run();
+	agent executeur(&mine, navigator);
+
+	//executeur.set_execution_map(p.execution);
+	executeur.execution_map_from_node_list(p.node_list);
 	c.objective1 = executeur.get_cost();
+	if (c.objective1 == 0) {
+		cout << "issue" << endl;
+	}
 
 	return true;  // solution is accepted
 }
@@ -40,81 +39,100 @@ MySolution genetic_optimizer::mutate(const MySolution& X_base,
 				  const std::function<double(void)>& rnd01,
 				  double shrink_scale) {
 	MySolution X_new;
-	X_new.execution = X_base.execution;
-	for (int j = 0; j < 3; j++) {
-		int action = floor(3. * rnd01());
-		if (action == 0) {
-			//replace
-			if (X_new.execution.length() > 0) {
-				int pos = floor((X_new.execution.length()) * rnd01());
-				int poss = floor((sizeof(possibilities)) * rnd01());
-				X_new.execution[pos] = possibilities[poss];
-			}
-		} else if (action == 1) {
-			//insert
-			int pos = floor((X_new.execution.length()) * rnd01());
-			int poss = floor((sizeof(possibilities)) * rnd01());
-			X_new.execution.insert(pos, to_string(possibilities[poss]));
-		} else  {
-			//remove
-			if (X_new.execution.length() > 0) {
-				int pos = floor((X_new.execution.length()) * rnd01());
-				X_new.execution.erase(pos);
-			}
-		}
+	int swap1 = 0;
+	int swap2 = 0;
+	int minswap, maxswap;
+	double action = rnd01();
+	while (swap1 == swap2) {
+		swap1 = rnd01() * X_base.node_list.size();
+		swap2 = rnd01() * X_base.node_list.size();
 	}
-	/*mine_state tester(base_mine);
-	X_new.execution = tester.strip(X_new.execution);
-	*/return X_new;
+
+	minswap = min(swap1, swap2);
+	maxswap = max(swap1, swap2);
+
+	if (action < .5) {
+		int i;
+		for (i = 0; i < minswap; i++) {
+			X_new.node_list.push_back(X_base.node_list[i]);
+		}
+		for (i = maxswap-1; i >= minswap; i--) {
+			X_new.node_list.push_back(X_base.node_list[i]);
+		}
+		for (i = maxswap; i < X_base.node_list.size(); i++) {
+			X_new.node_list.push_back(X_base.node_list[i]);
+		}
+	} else {
+		X_new.node_list = X_base.node_list;
+		iter_swap(X_new.node_list.begin() + swap1, X_new.node_list.begin() + swap2);
+	}
+	/*cout << "base_node=";
+	for (int i = 0; i < X_base.node_list.size(); i++)
+		cout << navigator->graph.id(X_base.node_list[i]) << " ";
+	cout << endl;
+	cout << "new_node=";
+	for (int i = 0; i < X_new.node_list.size(); i++)
+		cout << navigator->graph.id(X_new.node_list[i]) << " ";
+	cout << endl;*/
+	return X_new;
 }
 
 MySolution genetic_optimizer::crossover(const MySolution& X1, const MySolution& X2,
 					 const std::function<double(void)>& rnd01) {
 	MySolution X_new;
-	double proportion1 = rnd01() / 3;
-	double proportion2 = proportion1 + rnd01() / 3;
-	double proportion3 = proportion2 + rnd01() / 3;
-	//int action = floor(2. * rnd01());
+	int position1 = rnd01() * X1.node_list.size();
+	int position2 = rnd01() * X1.node_list.size();
+	int positionmin = min(position1, position2);
+	int positionmax = max(position1, position2);
+	vector<ListDigraph::Node> new_nodes;
+	int i;
+	//int action = 10 * rnd01();
 
-	if (1) {
-		int keep1 = rnd01() * 2;
-		int keep2 = rnd01() * 2;
-		int keep3 = rnd01() * 2;
-		int keep4 = rnd01() * 2;
+	/*if (action > 9) {
+		X_new.node_list = X1.node_list;
+		std::shuffle(std::begin(X_new.node_list), std::end(X_new.node_list), std::default_random_engine());
+		return X_new;
+	}*/
 
-		if (!keep1 && !keep2 && !keep3){
-			keep1 = 1;
-		}
-		if (keep1)
-			X_new.execution += X1.execution.substr(0, X1.execution.length() * proportion1);
-		if (keep2)
-			X_new.execution += X2.execution.substr(X2.execution.length() * proportion1, X2.execution.length() * proportion2);
-		if (keep3)
-			X_new.execution += X1.execution.substr(X1.execution.length() * proportion2, X1.execution.length() * proportion3);
-		if (keep4)
-			X_new.execution += X2.execution.substr(X2.execution.length() * proportion3, X2.execution.length());
-
-	} else {
-		for (auto it1 = X1.execution.begin(), it2 = X2.execution.begin(); it1 != X1.execution.end() && it2!= X2.execution.end(); ++it1, ++it2) {
-			if ((*it1 == 'W') && (*it2 == 'S'))
-				continue;
-			if ((*it1 == 'S') && (*it2 == 'W'))
-				continue;
-			if ((*it1 == 'D') && (*it2 == 'A'))
-				continue;
-			if ((*it1 == 'A') && (*it2 == 'D'))
-				continue;
-			int whichone = floor(2 * rnd01());
-			if (whichone)
-				X_new.execution += *it1;
-			else
-				X_new.execution += *it2;
-		}
-
+	for (i = positionmin; i < positionmax; i++) {
+		new_nodes.push_back(X1.node_list[i]);
 	}
 
-	/*mine_state tester(base_mine);
-	X_new.execution = tester.strip(X_new.execution);*/
+	int j = 0;
+	for (i = 0; i < positionmin; i++) {
+		ListDigraph::Node node = X2.node_list[j++];
+		while (find(new_nodes.begin(), new_nodes.end(), node) != new_nodes.end()) {
+			node = X2.node_list[j++];
+		}
+		new_nodes.insert(new_nodes.begin() + i, node);
+	}
+
+	for (i = positionmax; i < (int)X1.node_list.size(); i++) {
+		ListDigraph::Node node = X2.node_list[j++];
+		while (find(new_nodes.begin(), new_nodes.end(), node) != new_nodes.end()) {
+			node = X2.node_list[j++];
+		}
+		new_nodes.insert(new_nodes.begin() + i, node);
+	}
+	X_new.node_list = new_nodes;
+	if (new_nodes.size() < 20) {
+		cout << "issue" << endl;
+	}
+
+	/*cout << "X1=";
+	for (int i = 0; i < X1.node_list.size(); i++)
+		cout << navigator->graph.id(X1.node_list[i]) << " ";
+	cout << endl;
+	cout << "X2=";
+	for (int i = 0; i < X2.node_list.size(); i++)
+		cout << navigator->graph.id(X2.node_list[i]) << " ";
+	cout << endl;
+		cout << "Xnew=";
+	for (int i = 0; i < X_new.node_list.size(); i++)
+		cout << navigator->graph.id(X_new.node_list[i]) << " ";
+	cout << endl;
+
+	cout << "positionmin = " << positionmin << "positionmax = " << positionmax << endl;*/
 	return X_new;
 }
 
@@ -135,8 +153,7 @@ void genetic_optimizer::SO_report_generation(
 		 << "Generation [" << generation_number << "], " << setprecision(10)
 		 << "Best=" << -last_generation.best_total_cost << ", "
 		 << "Average=" << -last_generation.average_cost << ", "
-		 << "Best genes size=" << best_genes.execution.size()
-		 << ", "
+		 << "genes size=" << best_genes.to_string(this).length() << ", "
 		 << "Exe_time=" << last_generation.exe_time << endl;
 
 
@@ -158,6 +175,7 @@ genetic_optimizer::genetic_optimizer(int arg_instance) {
 	else instance_file << "./part-1-initial/prob-"<< setw(3) << setfill('0') << instance << ".desc";
 
 	base_mine = new mine_state(instance_file.str());
+	navigator = new mine_navigator(base_mine);
 
 	ifstream file_to_test(filename);
 	if (!file_to_test.good()) {
@@ -202,14 +220,15 @@ bool genetic_optimizer::solve(int population_size) {
 	ga_obj.SO_report_generation = std::bind(&genetic_optimizer::SO_report_generation, this, _1, _2, _3);
 	ga_obj.crossover_fraction = 0.7;
 	ga_obj.mutation_rate = 0.3;
-	ga_obj.best_stall_max = 150;
-	ga_obj.average_stall_max = 20;
-	ga_obj.elite_count = 30;
+	ga_obj.best_stall_max = 200;
+	ga_obj.average_stall_max = 100;
+	ga_obj.elite_count = 300;
 	EA::StopReason reason = ga_obj.solve();
 	cout << "The problem is optimized in " << timer.toc()
 			<< " seconds." << endl;
 	cout << "cause: " << ga_obj.stop_reason_to_string(reason)
 			<< endl;
+	cout << "m= " << ga_obj.mutation_rate << ", c= " << ga_obj.crossover_fraction << ", e= " << ga_obj.elite_count << endl;
 
 	return true;
 }
@@ -221,7 +240,7 @@ static void print_help() {
 		"	-h : this help \n"
 		"	-i instance: instance of the problem to display \n"
 		"	-l : load the best solution so far for this problem \n"
-		"	-a : do all problem\n"
+		"	-a from: do all problem from \"from\"\n"
 		"	-n number: number of thrust to optimize (default 1)\n"
 		"	-f factor: divider of fuel max to limit thrust range (default is "
 		"2)\n"
@@ -231,6 +250,7 @@ static void print_help() {
 
 int main(int argc, char** argv) {
 	bool do_all = false;
+	int start_instance = 0;
 	int c;
 	bool continue_after_stall = false;
 	int population = 2000;
@@ -239,12 +259,13 @@ int main(int argc, char** argv) {
 	int gInstance = 0;
 	bool verbose_chromosomes = false;
 
-	while ((c = getopt(argc, argv, "vdf:p:n:ahci:")) != -1) switch (c) {
+	while ((c = getopt(argc, argv, "vdf:p:n:a:hci:")) != -1) switch (c) {
 			case 'i':
 				gInstance = atoi(optarg);
 				break;
 			case 'a':
 				do_all = true;
+				start_instance = atoi(optarg);
 				break;
 			case 'c':
 				continue_after_stall = true;
@@ -267,23 +288,21 @@ int main(int argc, char** argv) {
 				exit(0);
 		}
 
-	for (int i = 1; i < 5; i++) {
-		for (int j = 1; j < 5; j++) {
-			if (do_all) {
-				gInstance = i * 1000 + j;
-			}
+	for (int i = start_instance; i < 150; i++) {
+		if (do_all) {
+			gInstance = i;
+		}
 
-			do {
-				genetic_optimizer optimizer(gInstance);
+		do {
+			genetic_optimizer optimizer(gInstance);
 
-				bool solved = optimizer.solve(population);
-				if (solved) break;
+			bool solved = optimizer.solve(population);
+			if (solved) break;
 
-			} while (continue_after_stall);
+		} while (continue_after_stall);
 
-			if (!do_all) {
-				return 0;
-			}
+		if (!do_all) {
+			return 0;
 		}
 	}
 	return 0;

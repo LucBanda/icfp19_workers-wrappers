@@ -8,5 +8,5 @@ add_definitions(-DALLEGRO -MD -MP -Wall -Wsign-compare -O3 -std=c++11 -Wshadow -
 add_executable (viz_ww src/main.cpp src/mine.cpp src/renderer.cpp src/agent.cpp src/fileparser.cpp)
 add_executable (optimizer src/mine.cpp src/agent.cpp src/genetic_optimizer.cpp)
 
-target_link_libraries(viz_ww allegro allegro_primitives allegro_main allegro_font allegro_ttf)
-target_link_libraries(optimizer allegro allegro_main)
+target_link_libraries(viz_ww allegro allegro_primitives allegro_main allegro_font allegro_ttf libemon.a)
+target_link_libraries(optimizer allegro allegro_main libemon.a)

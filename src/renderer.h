@@ -23,6 +23,8 @@ class renderer {
 	int FPS;
 	float draw_decimation;
 	ALLEGRO_FONT *debug_font;
+	bool step_it;
+	bool run_under_step;
 
    public:
 	std::function<bool(void *)> idle;

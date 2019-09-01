@@ -30,6 +30,8 @@ renderer::renderer() {
 	draw_decimation = 1;
 	FPS = 500 * draw_decimation;
 	scale_edited = false;
+	step_it = false;
+	run_under_step = false;
 }
 
 double start_radius = 0;
@@ -37,35 +39,19 @@ void renderer::draw() {
 
 	SCALE = max(mine->max_size_x + 2, mine->max_size_y + 2);
 	al_draw_filled_rectangle(0, 0, SCREEN_W, SCREEN_H, BOULDER_COL);
-	float *vertice_array;
-	int i;
 
-	vertice_array = (float*)calloc(mine->mine_map.size() * 2, sizeof(int));
-	i = 0;
-	for (auto it = mine->mine_map.begin(); it != mine->mine_map.end(); ++it) {
-		position to_screen_pos(TO_SCREEN(*it));
-		vertice_array[(2 * i)] = to_screen_pos.real();
-		vertice_array[(2 * i + 1)] = to_screen_pos.imag();
-		i++;
-	}
-	al_draw_filled_polygon(vertice_array, mine->mine_map.size(), YELLOW_COL);
-	free(vertice_array);
+	for (int i = 0; i < mine->max_size_x ; i++) {
+		for (int j = 0; j < mine->max_size_y; j++) {
+			position to_screen_pos(TO_SCREEN(position(i,j)));
+			if (mine->board[i][j] == WALL) {
+				al_draw_filled_rectangle(TO_SCREEN(position(i,j)), TO_SCREEN(position(i,j) + position(1,1)), BOULDER_COL);
+			} else if (mine->board[i][j] == EMPTY) {
+				al_draw_filled_rectangle(TO_SCREEN(position(i,j)), TO_SCREEN(position(i,j) + position(1,1)), WHITE_COL);
+			} else if (mine->board[i][j] == PAINTED) {
+				al_draw_filled_rectangle(TO_SCREEN(position(i,j)), TO_SCREEN(position(i,j) + position(1,1)), YELLOW_COL);
+			}
 
-	for (auto obstacle = mine->obstacles.begin(); obstacle != mine->obstacles.end(); ++obstacle){
-		vertice_array = (float*)calloc(obstacle->size() * 2, sizeof(int));
-		i = 0;
-		for (auto it = obstacle->begin(); it != obstacle->end(); ++it) {
-			position to_screen_pos(TO_SCREEN(*it));
-			vertice_array[(2 * i)] = to_screen_pos.real();
-			vertice_array[(2 * i + 1)] = to_screen_pos.imag();
-			i++;
 		}
-		al_draw_filled_polygon(vertice_array, obstacle->size(), BOULDER_COL);
-		free(vertice_array);
-	}
-
-	for(auto it=mine->non_validated_tiles.begin(); it != mine->non_validated_tiles.end(); ++it) {
-		al_draw_filled_rectangle(TO_SCREEN(*it), TO_SCREEN(*it + position(1,1)), WHITE_COL);
 	}
 
 	complex<double> robot_centered_pos(mine->robot.real() + 0.5, mine->robot.imag() + 0.5);
@@ -158,7 +144,10 @@ void renderer::mainLoop(void *params) {
 			redraw = true;
 			//i += 1;
 			//if (i > draw_decimation) {
+			if (!step_it || run_under_step) {
 				doexit = idle(idle_param);
+				run_under_step = false;
+			}
 			//	i = 0;
 			//}
 		} else if (ev.type == ALLEGRO_EVENT_DISPLAY_CLOSE) {
@@ -243,6 +232,12 @@ void renderer::mainLoop(void *params) {
 
 				case ALLEGRO_KEY_E:
 					mine->apply_command("E");
+					break;
+				case ALLEGRO_KEY_N:
+					step_it = !step_it;
+					break;
+				case ALLEGRO_KEY_SPACE:
+					run_under_step = true;
 					break;
 
 			}

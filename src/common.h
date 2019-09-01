@@ -13,10 +13,11 @@
 #include <sstream>
 #include <vector>
 #include <complex>
-
+#include <lemon/list_graph.h>
 
 typedef std::complex<double> Complex;
 
 using namespace std;
+using namespace lemon;
 
 #endif

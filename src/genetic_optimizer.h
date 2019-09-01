@@ -21,13 +21,13 @@ class genetic_optimizer {
         int instance;
         string filename;
 		mine_state *base_mine;
+        mine_navigator *navigator;
 
         genetic_optimizer(int instance);
         ~genetic_optimizer();
         bool solve(int population_size);
 
     private:
-		char possibilities[6] = {'W', 'S', 'A', 'D', 'Q', 'E'};
         bool eval_solution(const MySolution& p, MyMiddleCost& c);
         void init_genes(MySolution& p, const std::function<double(void)>& rnd01);
         MySolution mutate(const MySolution& X_base,
@@ -42,11 +42,12 @@ class genetic_optimizer {
 };
 
 struct MySolution {
-	string execution;
+	vector<ListDigraph::Node> node_list;
 
 	string to_string(genetic_optimizer * optim) const {
         mine_state mine(optim->base_mine);
-		return "*" + mine.strip(execution);
+        agent ag(&mine, optim->navigator);
+        return ag.execution_map_from_node_list(node_list);
 	}
 };
 

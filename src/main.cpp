@@ -75,9 +75,12 @@ int main(int argc, char** argv) {
 
 		//ag = new agent(instance);
 
-		render->set_mine(mine);
+		mine_state ag_mine(mine);
+		mine_navigator navigator(mine);
+
+		status.ag =  new agent(&ag_mine, &navigator);
 		status.mine = mine;
-		status.ag =  new agent(mine);
+		render->set_mine(mine);
 
 		if (load_result) {
 			if (fileName == "") fileName = "./results/" + to_string(instance) + ".txt";
@@ -85,11 +88,23 @@ int main(int argc, char** argv) {
 			status.ag->set_execution_map(execution);
 		}
 
+		//test
+		/*vector<ListDigraph::Node> test_list;
+		test_list = navigator.get_node_list();
+
+		string execution = status.ag->execution_map_from_node_list(test_list);
+		status.ag->set_execution_map(execution);
+		cout << execution << endl;
+		*/
 		render->idle = &idle;
 		render->idle_param = &status;
 		render->mainLoop(NULL);
 
 		cout << "time_step " << status.mine->time_step << endl;
+		cout << "score " << status.ag->get_cost()<< endl;
+		cout << "distance loss " << status.mine->distance_loss << endl;
+		cout << "useful " << status.mine->time_step - status.mine->distance_loss << endl;
+		cout << status.mine->distance_loss / status.mine->time_step * 100. << " %" <<endl;
 
 		delete render;
 		delete status.ag;

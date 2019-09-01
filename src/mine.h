@@ -2,8 +2,41 @@
 #define MINE_H
 #include "common.h"
 #include "complex"
+#include <lemon/list_graph.h>
 
 typedef complex<int> position;
+
+enum map_tile {
+	EMPTY,
+	PAINTED,
+	WALL,
+};
+
+enum orientation {
+	NORTH,
+	EAST,
+	SOUTH,
+	WEST,
+};
+
+class mine_state;
+
+class mine_navigator {
+   public:
+	mine_navigator(mine_state *mine_base);
+	~mine_navigator() {};
+	void init_graph();
+	string goto_node(enum orientation source_orientation, enum orientation &last_orientation, ListDigraph::Node orig, ListDigraph::Node target, ListDigraph::Node *ending_node);
+	//string orientcorrectly(enum orientation source_orientation, enum orientation target_orientation);
+	vector<ListDigraph::Node> get_node_list();
+
+	ListDigraph graph;
+	ListDigraph::NodeMap<position> coord_map;
+	ListDigraph::ArcMap<char> direction_map;
+	ListDigraph::ArcMap<enum orientation> orientation_map;
+	ListDigraph::ArcMap<int> length;
+	ListDigraph::Node initialNode;
+};
 
 class mine_state {
    public:
@@ -13,16 +46,19 @@ class mine_state {
 
 	double distance_loss;
 	int time_step;
-	bool is_point_valid(position point);
+	bool is_point_valid(position point, vector<position> *mine_map);
 	void apply_command(string command);
 	vector<string> get_next_valid_command();
 	string strip(string commands);
+	bool board_tile_is_painted(position tile);
+	bool board_tile_is_wall(position tile);
 
-	vector<position> non_validated_tiles;
+	int non_validated_tiles;
+	enum map_tile **board;
 
 	position robot;
+	enum orientation current_orientation;
 	vector<position> relative_manipulators;
-	vector<position> mine_map;
 	vector<position> manipulators_boosters;
 	vector<position> fastwheels_boosters;
 	vector<position> drill_boosters;

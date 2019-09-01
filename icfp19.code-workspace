@@ -68,7 +68,11 @@
 			"type_traits": "cpp",
 			"typeinfo": "cpp",
 			"utility": "cpp",
-			"vector": "cpp"
+			"vector": "cpp",
+			"array": "cpp",
+			"list": "cpp",
+			"__hash_table": "cpp",
+			"unordered_map": "cpp"
 		}
 	}
 }

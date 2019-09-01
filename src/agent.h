@@ -10,17 +10,23 @@ class agent {
 	mine_state *mine;
 	string execution;
 
-	agent(mine_state *arg_mine);
+	agent(mine_state *arg_mine, mine_navigator *arg_navigator);
 	virtual ~agent();
 
-	int get_cost();
+	double get_cost();
 	void step();
 	void set_execution_map(string map);
+	string execution_map_from_node_list(vector<ListDigraph::Node> node_list);
+
 	int run();
+	enum orientation current_orientation = EAST;
 
    protected:
+	double initial_targets;
 	string execution_map;
-	int max_time_step;
+	mine_navigator *navigator;
+
+	//int max_time_step;
 };
 
 #endif

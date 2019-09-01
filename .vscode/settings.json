@@ -3,13 +3,13 @@
     "cmake.debugConfig": {
         "stopAtEntry": false,
         "MIMode": "lldb",
-        "miDebuggerPath": "/Users/luc/.vscode/extensions/ms-vscode.cpptools-0.24.1/debugAdapters/lldb/bin/lldb-mi",
+        "miDebuggerPath": "/Users/luc/.vscode/extensions/ms-vscode.cpptools-0.25.1/debugAdapters/lldb/bin/lldb-mi",
         "logging": {
                 "trace": true,
                 "engineLogging": true,
                 "traceResponse": true
         },
-       "args": ["-i", "2", "-l"]
+       "args": ["-i", "1", "-p", "100"]
     }
 
 }

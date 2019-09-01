@@ -1,4 +1,11 @@
 #include "mine.h"
+#include <lemon/dijkstra.h>
+#include <lemon/graph_to_eps.h>
+
+#define BOARD_TILE_IS_WALL(x)		((x).real() < 0 || (x).real() >= max_size_x || (x).imag() < 0 || (x).imag() >= max_size_y || board[(x).real()][(x).imag()] == WALL)
+#define BOARD_TILE_IS_EMPTY(x)		((x).real() >= 0 && (x).real() < max_size_x && (x).imag() >= 0 && (x).imag() < max_size_y &&  board[(x).real()][(x).imag()] == EMPTY)
+#define BOARD_TILE_IS_PAINTED(x)	((x).real() >= 0 && (x).real() < max_size_x && (x).imag() >= 0 && (x).imag() < max_size_y && board[(x).real()][(x).imag()] == PAINTED)
+#define BOARD_TILE(x) 				board[(x).real()][(x).imag()]
 
 static string get_next_tuple_token(string *line) {
 	string token;
@@ -39,11 +46,7 @@ static vector<position> parse_token_list(string line) {
 	string open_delimiter = "(";
 	string token_delimiter = "),(";
 	string close_delimiter = ")";
-	/*size_t openpos = t_line.find(open_delimiter);
-	t_line.erase(0, openpos + open_delimiter.length());
-	size_t closepos = t_line.find(close_delimiter);
-	t_line.erase(closepos, line.npos);
-*/
+
 	size_t tokenpos = 0, tokenend;
 	tokenpos = t_line.find(open_delimiter);
 	tokenend = t_line.find(close_delimiter);
@@ -84,7 +87,6 @@ static bool PointInPolygon(position point, vector<position> polygon) {
 }
 
 mine_state::mine_state(mine_state *base_mine) {
-	mine_map = base_mine->mine_map;
 	robot = base_mine->robot;
 	obstacles = base_mine->obstacles;
 	mystere_boosters = base_mine->mystere_boosters;
@@ -100,20 +102,39 @@ mine_state::mine_state(mine_state *base_mine) {
 	owned_manipulators_boosters = 0;
 	time_step = 0;
 	distance_loss = 0;
+	current_orientation = EAST;
+	board = (enum map_tile **) calloc(max_size_x, sizeof(enum map_tile *));
+	for (int i = 0; i < max_size_x; i++) {
+		board[i] = (enum map_tile *) calloc(max_size_y, sizeof(enum map_tile));
+		memcpy(board[i], base_mine->board[i], max_size_y * sizeof(enum map_tile));
+	}
+	/*digraphCopy(base_mine->graph, graph).nodeMap(base_mine->coord_map, coord_map).arcMap(base_mine->length, length).arcMap(base_mine->direction_map, direction_map).arcMap(base_mine->orientation_map, orientation_map).run();
+	initialNode = base_mine->initialNode;*/
+}
+
+bool mine_state::board_tile_is_painted(position tile) {
+	return BOARD_TILE_IS_PAINTED(tile);
+}
+
+bool mine_state::board_tile_is_wall(position tile) {
+	return BOARD_TILE_IS_WALL(tile);
 }
 
 mine_state::mine_state(string filename) {
 	ifstream file(filename);
+	vector<position> mine_map;
     if (!file.good()) {
 		cout << "cannot find file " << filename <<endl;
 		return;
 	}
+
 	if (file) {
 		std::string token;
 		std::string line;
 		getline(file, line);
 		//cout << line << endl;
 		// remove beginning
+
 		mine_map = parse_token_list(get_next_tuple_token(&line));
 		//cout << "########################################"<< endl;
 		robot = parse_token_list(get_next_tuple_token(&line))[0];
@@ -147,15 +168,21 @@ mine_state::mine_state(string filename) {
 	}
 	max_size_x = 0;
 	max_size_y = 0;
+	non_validated_tiles = 0;
 	for (auto it = mine_map.begin(); it != mine_map.end(); ++it) {
 		if (max_size_x < it->real()) max_size_x = it->real();
 		if (max_size_y < it->imag()) max_size_y = it->imag();
 	}
+	board = (enum map_tile **) calloc(max_size_x, sizeof(enum map_tile *));
 	for (int i = 0; i < max_size_x; i++) {
+		board[i] = (enum map_tile *) calloc(max_size_y, sizeof(enum map_tile));
 		for (int j = 0; j < max_size_y; j++) {
 			position cur(i,j);
-			if (is_point_valid(cur)) {
-				non_validated_tiles.push_back(cur);
+			if (is_point_valid(cur, &mine_map)) {
+				non_validated_tiles++;
+				board[i][j] = EMPTY;
+			} else {
+				board[i][j] = WALL;
 			}
 		}
 	}
@@ -164,23 +191,178 @@ mine_state::mine_state(string filename) {
 	relative_manipulators.push_back(position(1, -1));
 	//validate points
 	for (auto it = relative_manipulators.begin(); it != relative_manipulators.end(); ++it) {
-		auto pos_to_remove = find(non_validated_tiles.begin(), non_validated_tiles.end(), *it + robot);
-		if (pos_to_remove != non_validated_tiles.end()) non_validated_tiles.erase(pos_to_remove);
+		position pos_to_remove = *it + robot;
+		if (board[pos_to_remove.real()][pos_to_remove.imag()] == EMPTY) {
+			non_validated_tiles--;
+			BOARD_TILE(pos_to_remove) = PAINTED;
+		}
 	}
 	owned_fastwheels_boosters = 0;
 	owned_drill_boosters = 0;
 	owned_manipulators_boosters = 0;
 	time_step = 0;
 	distance_loss = 0;
+	current_orientation = EAST;
+	//init_graph();
 }
 
-mine_state::~mine_state() {}
+mine_state::~mine_state() {
+	for (int i = 0; i < max_size_x; i++) {
+		free(board[i]);
+	}
+	free(board);
+}
 
+typedef dim2::Point<int> Point;
 
+mine_navigator::mine_navigator(mine_state *base_mine): coord_map(graph), direction_map(graph), orientation_map(graph), length(graph)  {
+	int i,j;
+	ListDigraph::NodeMap<Point> coords(graph);
+	ListDigraph::NodeMap<double> sizes(graph);
+	ListDigraph::ArcMap<int> acolors(graph);
+	Palette palette;
+ 	Palette paletteW(true);
+	for (i = 0; i < base_mine->max_size_x; i++) {
+		for (j = 0; j < base_mine->max_size_y; j++) {
+			if (!base_mine->board_tile_is_wall(position(i,j))) {
+				ListDigraph::Node u = graph.addNode();
+				position currentpos(i,j);
+				coord_map[u] = currentpos;
+				if (currentpos == base_mine->robot) {
+					initialNode = u;
+				}
+				coords[u] = Point(i,j);
+				sizes[u] = .3;
+			}
+		}
+	}
 
-bool mine_state::is_point_valid(position point) {
+	for (ListDigraph::NodeIt n(graph); n != INVALID; ++n) {
+		for (ListDigraph::NodeIt v(graph); v != INVALID; ++v) {
+			if (coord_map[n] == position(coord_map[v].real()  + 1, coord_map[v].imag())) {
+				ListDigraph::Arc e = graph.addArc(n,v);
+				direction_map[e] = 'D';
+				orientation_map[e] = EAST;
+				length[e] = 1;
+				acolors[e] = 0;
+			} else if (coord_map[n] == position(coord_map[v].real()  - 1, coord_map[v].imag())) {
+				ListDigraph::Arc e = graph.addArc(n,v);
+				direction_map[e] = 'A';
+				orientation_map[e] = WEST;
+				length[e] = 1;
+				acolors[e] = 1;
+			} else if (coord_map[n] == position(coord_map[v].real(), coord_map[v].imag() - 1)) {
+				ListDigraph::Arc e = graph.addArc(n,v);
+				direction_map[e] = 'S';
+				orientation_map[e] = SOUTH;
+				length[e] = 1;
+				acolors[e] = 2;
+			} else if (coord_map[n] == position(coord_map[v].real(), coord_map[v].imag() + 1)) {
+				ListDigraph::Arc e = graph.addArc(n,v);
+				direction_map[e] = 'W';
+				orientation_map[e] = NORTH;
+				length[e] = 1;
+				acolors[e] = 3;
+			}
+		}
+	}
+	/* IdMap<ListDigraph,ListDigraph::Node> id(graph);
+
+	graphToEps(graph, "graph.eps")
+  .title("Sample EPS figure")
+  .copyright("(c) 2003-2010 LEMON Project").coords(coords)
+   .absoluteNodeSizes().absoluteArcWidths().
+    nodeScale(.2).nodeSizes(sizes).
+    arcWidthScale(.004).//.arcWidths(widths).
+	arcColors(composeMap(palette, acolors)).
+    nodeTexts(id).nodeTextSize(.03).enableParallel().drawArrows().arrowWidth(.01).arrowLength(.1).
+    run();*/
+}
+
+vector<ListDigraph::Node> mine_navigator::get_node_list() {
+	vector<ListDigraph::Node> result;
+	for (ListDigraph::NodeIt n(graph); n != INVALID; ++n)
+		result.push_back(n);
+	return result;
+}
+
+string mine_navigator::goto_node(enum orientation source_orientation,enum orientation &last_orientation, ListDigraph::Node orig, ListDigraph::Node target, ListDigraph::Node *ending_node) {
+	string result;
+	string last_car = "";
+	ListDigraph::Arc last_arc;
+
+	if (orig == target){
+		for (ListDigraph::InArcIt a(graph, orig); a != INVALID; ++a) {
+			char dir = direction_map[a];
+			result += dir;
+			if (dir == 'A') {
+				last_car = "D";
+				last_orientation = EAST;
+			}
+			else if (dir == 'D') {
+				last_car = "A";
+				last_orientation = WEST;
+			}
+			else if (dir == 'W') {
+				last_car = "S";
+				last_orientation = SOUTH;
+			}
+			else if (dir == 'S') {
+				last_car = "W";
+				last_orientation = NORTH;
+			}
+			*ending_node = graph.source(a);
+			break;
+		}
+
+	} else {
+		//apply dijkstra to graph
+		std::vector<ListDigraph::Arc> arcpath;
+		Dijkstra<ListDigraph> dijkstra(graph, length);
+		dijkstra.run(target, orig);
+
+		//get back path
+		Dijkstra<ListDigraph>::Path path = dijkstra.path(orig);
+		for(Dijkstra<ListDigraph>::Path::RevArcIt it(path); it!=INVALID ; it.operator++() ) {
+			result += direction_map[it];
+			last_orientation = orientation_map[it];
+			*ending_node = graph.target(it);
+		}
+
+		//get node n-1 of the path
+		last_car = "";
+		if (result.size() > 0) {
+			last_car = result.substr(result.size()-1, result.size());
+		}
+		result.pop_back();
+	}
+
+	// orient corrctly;
+	if ((last_orientation == NORTH && source_orientation == SOUTH)
+		|| (last_orientation == SOUTH && source_orientation == NORTH)
+		|| (last_orientation == EAST && source_orientation == WEST)
+		|| (last_orientation == WEST && source_orientation == EAST)) {
+			result += "QQ";
+	} else if ((last_orientation == NORTH && source_orientation == EAST)
+		|| (last_orientation == EAST && source_orientation == SOUTH)
+		|| (last_orientation == SOUTH && source_orientation == WEST)
+		|| (last_orientation == WEST && source_orientation == NORTH)) {
+			result += "Q";
+	} else if ((last_orientation == NORTH && source_orientation == WEST)
+		|| (last_orientation == WEST && source_orientation == SOUTH)
+		|| (last_orientation == SOUTH && source_orientation == EAST)
+		|| (last_orientation == EAST && source_orientation == NORTH)) {
+			result += "E";
+	}
+	//result+=last_car;
+
+	//get all directions of the path in the result
+	return result;
+}
+
+bool mine_state::is_point_valid(position point, vector<position> *mine_map) {
 	bool is_valid = false;
-	if (PointInPolygon(point, mine_map)) {
+	if (PointInPolygon(point, *mine_map)) {
 		is_valid = true;
 		for (auto it = obstacles.begin(); it != obstacles.end(); ++it) {
 			if (PointInPolygon(point, *it)) {
@@ -193,15 +375,18 @@ bool mine_state::is_point_valid(position point) {
 
 vector<string> mine_state::get_next_valid_command() {
 	vector<string> ret;
+	position point_to_test;
+
 	ret.push_back("Q");
 	ret.push_back("E");
-	if (is_point_valid(robot + position(1,0)))
+
+	if (!BOARD_TILE_IS_WALL(robot + position(1,0)))
 		ret.push_back("D");
-	if (is_point_valid(robot + position(-1,0)))
+	if (!BOARD_TILE_IS_WALL(robot + position(-1,0)))
 		ret.push_back("A");
-	if (is_point_valid(robot + position(0,1)))
+	if (!BOARD_TILE_IS_WALL(robot + position(0,1)))
 		ret.push_back("W");
-	if (is_point_valid(robot + position(0,-1)))
+	if (!BOARD_TILE_IS_WALL(robot + position(0,-1)))
 		ret.push_back("S");
 	return ret;
 }
@@ -210,24 +395,24 @@ string mine_state::strip(string commands) {
 	string ret = "";
 
 	for (auto it = commands.begin(); it != commands.end();++it) {
-		if (non_validated_tiles.size() == 0) {
+		if (non_validated_tiles == 0) {
 			return ret;
 		}
 		switch (*it) {
 			case 'W':
-				if (is_point_valid(robot + position(0,1)))
+				if (!BOARD_TILE_IS_WALL(robot + position(0,1)))
 					ret += "W";
 				break;
 			case 'D':
-				if (is_point_valid(robot + position(1,0)))
+				if (!BOARD_TILE_IS_WALL(robot + position(1,0)))
 					ret += "D";
 				break;
 			case 'S':
-				if (is_point_valid(robot + position(0,-1)))
+				if (!BOARD_TILE_IS_WALL(robot + position(0,-1)))
 					ret += "S";
 				break;
 			case 'A':
-				if (is_point_valid(robot + position(-1,0)))
+				if (!BOARD_TILE_IS_WALL(robot + position(-1,0)))
 					ret += "A";
 				break;
 			default:
@@ -272,34 +457,39 @@ void mine_state::apply_command(string command) {
 			break;
 		}
 		//move
-		if (new_pos != position(-1, -1) && is_point_valid(new_pos)) {
-			robot = new_pos;
-			time_step++;
-		} else {
-			invalid_move = true;
+		invalid_move = false;
+		if (new_pos != position(-1, -1)) {
+			if (!BOARD_TILE_IS_WALL(new_pos)) {
+				robot = new_pos;
+				time_step++;
+			} else {
+				invalid_move = true;
+			}
 		}
 
 		//validate tiles
 		bool validated = false;
 		for (auto it = relative_manipulators.begin(); it != relative_manipulators.end(); ++it) {
-			auto pos_to_remove = find(non_validated_tiles.begin(), non_validated_tiles.end(), *it + robot);
-			if (pos_to_remove != non_validated_tiles.end()) {
-				non_validated_tiles.erase(pos_to_remove);
+			position pos_to_remove = *it + robot;
+			if (BOARD_TILE_IS_EMPTY(pos_to_remove)) {
+				non_validated_tiles--;
+				if (non_validated_tiles < 0) {
+					cout << "issue" << endl;
+				}
+				BOARD_TILE(pos_to_remove) = PAINTED;
 				validated = true;
 			}
 		}
-		if (validated == false && !invalid_move)
+		if (validated == false && !invalid_move) {
 			distance_loss ++;
-		//get distance loss
-		/*double min_distance = 300000;
-		if (non_validated_tiles.size() != 0) {
-			for (auto it = non_validated_tiles.begin(); it != non_validated_tiles.end(); ++it) {
-				if (min_distance > abs(robot - *it))
-					min_distance = abs(robot - *it);
-			}
-			distance_loss += min_distance;
-		}*/
-		//cout << distance_loss << endl;
+			//cout << "unusefull" << distance_loss << endl;
+		}
+		/*cout << "validated = " << validated << endl;
+		cout << "distance_loss = " << distance_loss << endl;
+		cout << "invalid = " << invalid_move << endl;
+		cout << "time_step = " << time_step << endl;
+		cout << endl;*/
+
 		//collect manipulator booster
 		auto pos_to_remove = find(manipulators_boosters.begin(), manipulators_boosters.end(), robot);
 		if (pos_to_remove != manipulators_boosters.end()){
@@ -318,6 +508,5 @@ void mine_state::apply_command(string command) {
 			drill_boosters.erase(pos_to_remove);
 			owned_drill_boosters += 1;
 		}
-
 	}
 }
