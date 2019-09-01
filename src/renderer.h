@@ -20,7 +20,7 @@ class renderer {
 
 	double SCALE;
 	bool scale_edited;
-	int FPS;
+	double FPS;
 	float draw_decimation;
 	ALLEGRO_FONT *debug_font;
 	bool step_it;

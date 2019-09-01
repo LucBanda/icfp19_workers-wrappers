@@ -28,7 +28,7 @@ using namespace std;
 renderer::renderer() {
 	SCALE = 1;
 	draw_decimation = 1;
-	FPS = 500 * draw_decimation;
+	FPS = 50;
 	scale_edited = false;
 	step_it = false;
 	run_under_step = false;

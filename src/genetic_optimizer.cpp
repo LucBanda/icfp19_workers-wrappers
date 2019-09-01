@@ -6,18 +6,43 @@
 #include "openga.hpp"
 #include "genetic_optimizer.h"
 #include "functional"
+#include "sys/time.h"
 
 using std::cout;
 using std::endl;
 using std::string;
 
+int randomfunc(int j)
+{
+    return rand() % j;
+}
+
 void genetic_optimizer::init_genes(MySolution& p, const std::function<double(void)>& rnd01) {
+	struct timeval time;
+     gettimeofday(&time,NULL);
+
+     // microsecond has 1 000 000
+     // Assuming you did not need quite that accuracy
+     // Also do not assume the system clock has that accuracy.
+    srand((time.tv_sec) + (time.tv_usec));
+	//srand(unsigned(time(NULL)));
 	vector<ListDigraph::Node> list_node = navigator->get_node_list();
-
-	std::reverse(list_node.begin(), list_node.end());
-	std::shuffle(std::begin(list_node), std::end(list_node), std::default_random_engine());
-
-	p.node_list = list_node;
+	p.node_list.clear();
+	//std::reverse(list_node.begin(), list_node.end());
+	random_shuffle(std::begin(list_node), std::end(list_node), randomfunc);
+	for (auto it = list_node.begin(); it != list_node.end(); ++it) {
+		int depth = max(10., list_node.size() * rnd01());
+		if (find(p.node_list.begin(), p.node_list.end(), *it) == p.node_list.end()) {
+			vector<ListDigraph::Node> bfsresult = navigator->get_bfs_from_node(*it, depth);
+			for(auto res = bfsresult.begin(); res != bfsresult.end(); ++res)
+				if (find(p.node_list.begin(), p.node_list.end(), *res) == p.node_list.end())
+					p.node_list.push_back(*res);
+		}
+	}
+	/*for (int i = 0; i < p.node_list.size(); i++)
+		cout << navigator->graph.id(p.node_list[i]) << " ";
+	cout << endl;*/
+	//p.node_list = list_node;
 }
 
 bool genetic_optimizer::eval_solution(const MySolution& p, MyMiddleCost& c) {
@@ -196,6 +221,7 @@ genetic_optimizer::genetic_optimizer(int arg_instance) {
 }
 genetic_optimizer::~genetic_optimizer() {
 	delete base_mine;
+	delete navigator;
 }
 
 bool genetic_optimizer::solve(int population_size) {
@@ -221,7 +247,7 @@ bool genetic_optimizer::solve(int population_size) {
 	ga_obj.crossover_fraction = 0.7;
 	ga_obj.mutation_rate = 0.3;
 	ga_obj.best_stall_max = 200;
-	ga_obj.average_stall_max = 100;
+	ga_obj.average_stall_max = 50;
 	ga_obj.elite_count = 300;
 	EA::StopReason reason = ga_obj.solve();
 	cout << "The problem is optimized in " << timer.toc()

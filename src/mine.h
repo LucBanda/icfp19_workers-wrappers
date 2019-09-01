@@ -29,7 +29,7 @@ class mine_navigator {
 	string goto_node(enum orientation source_orientation, enum orientation &last_orientation, ListDigraph::Node orig, ListDigraph::Node target, ListDigraph::Node *ending_node);
 	//string orientcorrectly(enum orientation source_orientation, enum orientation target_orientation);
 	vector<ListDigraph::Node> get_node_list();
-
+	vector<ListDigraph::Node> get_bfs_from_node(ListDigraph::Node start, int depth);
 	ListDigraph graph;
 	ListDigraph::NodeMap<position> coord_map;
 	ListDigraph::ArcMap<char> direction_map;

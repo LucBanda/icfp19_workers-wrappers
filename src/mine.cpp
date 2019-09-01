@@ -1,6 +1,8 @@
 #include "mine.h"
 #include <lemon/dijkstra.h>
 #include <lemon/graph_to_eps.h>
+#include <lemon/bfs.h>
+#include <lemon/dfs.h>
 
 #define BOARD_TILE_IS_WALL(x)		((x).real() < 0 || (x).real() >= max_size_x || (x).imag() < 0 || (x).imag() >= max_size_y || board[(x).real()][(x).imag()] == WALL)
 #define BOARD_TILE_IS_EMPTY(x)		((x).real() >= 0 && (x).real() < max_size_x && (x).imag() >= 0 && (x).imag() < max_size_y &&  board[(x).real()][(x).imag()] == EMPTY)
@@ -120,6 +122,194 @@ bool mine_state::board_tile_is_wall(position tile) {
 	return BOARD_TILE_IS_WALL(tile);
 }
 
+typedef dim2::Point<int> Point;
+
+mine_navigator::mine_navigator(mine_state *base_mine): coord_map(graph), direction_map(graph), orientation_map(graph), length(graph)  {
+	int i,j;
+	ListDigraph::NodeMap<Point> coords(graph);
+	ListDigraph::NodeMap<double> sizes(graph);
+	ListDigraph::ArcMap<int> acolors(graph);
+	Palette palette;
+ 	Palette paletteW(true);
+	for (i = 0; i < base_mine->max_size_x; i++) {
+		for (j = 0; j < base_mine->max_size_y; j++) {
+			if (!base_mine->board_tile_is_wall(position(i,j))) {
+				ListDigraph::Node u = graph.addNode();
+				position currentpos(i,j);
+				coord_map[u] = currentpos;
+				if (currentpos == base_mine->robot) {
+					initialNode = u;
+				}
+				coords[u] = Point(i,j);
+				sizes[u] = .3;
+			}
+		}
+	}
+
+	for (ListDigraph::NodeIt n(graph); n != INVALID; ++n) {
+		for (ListDigraph::NodeIt v(graph); v != INVALID; ++v) {
+			if (coord_map[n] == position(coord_map[v].real()  + 1, coord_map[v].imag())) {
+				ListDigraph::Arc e = graph.addArc(n,v);
+				direction_map[e] = 'D';
+				orientation_map[e] = EAST;
+				length[e] = 1;
+				acolors[e] = 0;
+			} else if (coord_map[n] == position(coord_map[v].real()  - 1, coord_map[v].imag())) {
+				ListDigraph::Arc e = graph.addArc(n,v);
+				direction_map[e] = 'A';
+				orientation_map[e] = WEST;
+				length[e] = 1;
+				acolors[e] = 1;
+			} else if (coord_map[n] == position(coord_map[v].real(), coord_map[v].imag() - 1)) {
+				ListDigraph::Arc e = graph.addArc(n,v);
+				direction_map[e] = 'S';
+				orientation_map[e] = SOUTH;
+				length[e] = 1;
+				acolors[e] = 2;
+			} else if (coord_map[n] == position(coord_map[v].real(), coord_map[v].imag() + 1)) {
+				ListDigraph::Arc e = graph.addArc(n,v);
+				direction_map[e] = 'W';
+				orientation_map[e] = NORTH;
+				length[e] = 1;
+				acolors[e] = 3;
+			}
+		}
+	}
+}
+
+vector<ListDigraph::Node> mine_navigator::get_node_list() {
+	vector<ListDigraph::Node> result;
+	for (ListDigraph::NodeIt n(graph); n != INVALID; ++n)
+		result.push_back(n);
+	return result;
+}
+
+vector<ListDigraph::Node> mine_navigator::get_bfs_from_node(ListDigraph::Node start, int depth) {
+	Bfs<ListDigraph> bfs(graph);
+	vector<ListDigraph::Node> result;
+	bfs.init();
+    bfs.addSource(start);
+    while (!bfs.emptyQueue() && (depth-- != 0 || depth == 0)) {
+      ListDigraph::Node v = bfs.processNextNode();
+	  if (find(result.begin(), result.end(), v) == result.end())
+		result.push_back(v);
+      //std::cout << g.id(v) << ": " << alg.dist(v) << std::endl;
+    }
+
+	/*Dfs<ListDigraph> dfs(graph);
+	vector<ListDigraph::Node> result;
+	dfs.init();
+    dfs.addSource(start);
+    while (!dfs.emptyQueue() && (depth-- != 0 || depth == 0)) {
+      ListDigraph::Arc a = dfs.processNextArc();
+	  if (find(result.begin(), result.end(), graph.source(a)) == result.end())
+		result.push_back(graph.source(a));*/
+
+	/*vector<ListDigraph::Node> result;
+	vector<ListDigraph::Node> fifo;
+	fifo.push_back(start);
+	while (depth-- != 0) {
+		vector<ListDigraph::Node> level_nodes = fifo;
+		fifo.clear();
+		for (auto it = level_nodes.begin(); it != level_nodes.end(); ++it) {
+			result.push_back(*it);
+			for (ListDigraph::InArcIt a(graph, *it); a != INVALID; ++a) {
+				if (find(result.begin(), result.end(), graph.source(a)) == result.end())
+					fifo.push_back(graph.source(a));
+			}
+		}
+	}*/
+	return result;
+}
+
+string mine_navigator::goto_node(enum orientation source_orientation,enum orientation &last_orientation, ListDigraph::Node orig, ListDigraph::Node target, ListDigraph::Node *ending_node) {
+	string result;
+	string last_car = "";
+	ListDigraph::Arc last_arc;
+
+	if (orig == target){
+		for (ListDigraph::InArcIt a(graph, orig); a != INVALID; ++a) {
+			char dir = direction_map[a];
+			result += dir;
+			if (dir == 'A') {
+				last_car = "D";
+				last_orientation = EAST;
+			}
+			else if (dir == 'D') {
+				last_car = "A";
+				last_orientation = WEST;
+			}
+			else if (dir == 'W') {
+				last_car = "S";
+				last_orientation = SOUTH;
+			}
+			else if (dir == 'S') {
+				last_car = "W";
+				last_orientation = NORTH;
+			}
+			*ending_node = graph.source(a);
+			break;
+		}
+
+	} else {
+		//apply dijkstra to graph
+		std::vector<ListDigraph::Arc> arcpath;
+		Dijkstra<ListDigraph> dijkstra(graph, length);
+		dijkstra.run(target, orig);
+
+		//get back path
+		Dijkstra<ListDigraph>::Path path = dijkstra.path(orig);
+		for(Dijkstra<ListDigraph>::Path::RevArcIt it(path); it!=INVALID ; it.operator++() ) {
+			result += direction_map[it];
+			last_orientation = orientation_map[it];
+			*ending_node = graph.target(it);
+		}
+
+		//get node n-1 of the path
+		last_car = "";
+		if (result.size() > 0) {
+			last_car = result.substr(result.size()-1, result.size());
+		}
+		result.pop_back();
+	}
+
+	// orient corrctly;
+	if ((last_orientation == NORTH && source_orientation == SOUTH)
+		|| (last_orientation == SOUTH && source_orientation == NORTH)
+		|| (last_orientation == EAST && source_orientation == WEST)
+		|| (last_orientation == WEST && source_orientation == EAST)) {
+			result += "QQ";
+	} else if ((last_orientation == NORTH && source_orientation == EAST)
+		|| (last_orientation == EAST && source_orientation == SOUTH)
+		|| (last_orientation == SOUTH && source_orientation == WEST)
+		|| (last_orientation == WEST && source_orientation == NORTH)) {
+			result += "Q";
+	} else if ((last_orientation == NORTH && source_orientation == WEST)
+		|| (last_orientation == WEST && source_orientation == SOUTH)
+		|| (last_orientation == SOUTH && source_orientation == EAST)
+		|| (last_orientation == EAST && source_orientation == NORTH)) {
+			result += "E";
+	}
+	//result+=last_car;
+
+	//get all directions of the path in the result
+	return result;
+}
+
+bool mine_state::is_point_valid(position point, vector<position> *mine_map) {
+	bool is_valid = false;
+	if (PointInPolygon(point, *mine_map)) {
+		is_valid = true;
+		for (auto it = obstacles.begin(); it != obstacles.end(); ++it) {
+			if (PointInPolygon(point, *it)) {
+				is_valid = false;
+			}
+		}
+	}
+	return is_valid;
+}
+
+
 mine_state::mine_state(string filename) {
 	ifstream file(filename);
 	vector<position> mine_map;
@@ -211,166 +401,6 @@ mine_state::~mine_state() {
 		free(board[i]);
 	}
 	free(board);
-}
-
-typedef dim2::Point<int> Point;
-
-mine_navigator::mine_navigator(mine_state *base_mine): coord_map(graph), direction_map(graph), orientation_map(graph), length(graph)  {
-	int i,j;
-	ListDigraph::NodeMap<Point> coords(graph);
-	ListDigraph::NodeMap<double> sizes(graph);
-	ListDigraph::ArcMap<int> acolors(graph);
-	Palette palette;
- 	Palette paletteW(true);
-	for (i = 0; i < base_mine->max_size_x; i++) {
-		for (j = 0; j < base_mine->max_size_y; j++) {
-			if (!base_mine->board_tile_is_wall(position(i,j))) {
-				ListDigraph::Node u = graph.addNode();
-				position currentpos(i,j);
-				coord_map[u] = currentpos;
-				if (currentpos == base_mine->robot) {
-					initialNode = u;
-				}
-				coords[u] = Point(i,j);
-				sizes[u] = .3;
-			}
-		}
-	}
-
-	for (ListDigraph::NodeIt n(graph); n != INVALID; ++n) {
-		for (ListDigraph::NodeIt v(graph); v != INVALID; ++v) {
-			if (coord_map[n] == position(coord_map[v].real()  + 1, coord_map[v].imag())) {
-				ListDigraph::Arc e = graph.addArc(n,v);
-				direction_map[e] = 'D';
-				orientation_map[e] = EAST;
-				length[e] = 1;
-				acolors[e] = 0;
-			} else if (coord_map[n] == position(coord_map[v].real()  - 1, coord_map[v].imag())) {
-				ListDigraph::Arc e = graph.addArc(n,v);
-				direction_map[e] = 'A';
-				orientation_map[e] = WEST;
-				length[e] = 1;
-				acolors[e] = 1;
-			} else if (coord_map[n] == position(coord_map[v].real(), coord_map[v].imag() - 1)) {
-				ListDigraph::Arc e = graph.addArc(n,v);
-				direction_map[e] = 'S';
-				orientation_map[e] = SOUTH;
-				length[e] = 1;
-				acolors[e] = 2;
-			} else if (coord_map[n] == position(coord_map[v].real(), coord_map[v].imag() + 1)) {
-				ListDigraph::Arc e = graph.addArc(n,v);
-				direction_map[e] = 'W';
-				orientation_map[e] = NORTH;
-				length[e] = 1;
-				acolors[e] = 3;
-			}
-		}
-	}
-	/* IdMap<ListDigraph,ListDigraph::Node> id(graph);
-
-	graphToEps(graph, "graph.eps")
-  .title("Sample EPS figure")
-  .copyright("(c) 2003-2010 LEMON Project").coords(coords)
-   .absoluteNodeSizes().absoluteArcWidths().
-    nodeScale(.2).nodeSizes(sizes).
-    arcWidthScale(.004).//.arcWidths(widths).
-	arcColors(composeMap(palette, acolors)).
-    nodeTexts(id).nodeTextSize(.03).enableParallel().drawArrows().arrowWidth(.01).arrowLength(.1).
-    run();*/
-}
-
-vector<ListDigraph::Node> mine_navigator::get_node_list() {
-	vector<ListDigraph::Node> result;
-	for (ListDigraph::NodeIt n(graph); n != INVALID; ++n)
-		result.push_back(n);
-	return result;
-}
-
-string mine_navigator::goto_node(enum orientation source_orientation,enum orientation &last_orientation, ListDigraph::Node orig, ListDigraph::Node target, ListDigraph::Node *ending_node) {
-	string result;
-	string last_car = "";
-	ListDigraph::Arc last_arc;
-
-	if (orig == target){
-		for (ListDigraph::InArcIt a(graph, orig); a != INVALID; ++a) {
-			char dir = direction_map[a];
-			result += dir;
-			if (dir == 'A') {
-				last_car = "D";
-				last_orientation = EAST;
-			}
-			else if (dir == 'D') {
-				last_car = "A";
-				last_orientation = WEST;
-			}
-			else if (dir == 'W') {
-				last_car = "S";
-				last_orientation = SOUTH;
-			}
-			else if (dir == 'S') {
-				last_car = "W";
-				last_orientation = NORTH;
-			}
-			*ending_node = graph.source(a);
-			break;
-		}
-
-	} else {
-		//apply dijkstra to graph
-		std::vector<ListDigraph::Arc> arcpath;
-		Dijkstra<ListDigraph> dijkstra(graph, length);
-		dijkstra.run(target, orig);
-
-		//get back path
-		Dijkstra<ListDigraph>::Path path = dijkstra.path(orig);
-		for(Dijkstra<ListDigraph>::Path::RevArcIt it(path); it!=INVALID ; it.operator++() ) {
-			result += direction_map[it];
-			last_orientation = orientation_map[it];
-			*ending_node = graph.target(it);
-		}
-
-		//get node n-1 of the path
-		last_car = "";
-		if (result.size() > 0) {
-			last_car = result.substr(result.size()-1, result.size());
-		}
-		result.pop_back();
-	}
-
-	// orient corrctly;
-	if ((last_orientation == NORTH && source_orientation == SOUTH)
-		|| (last_orientation == SOUTH && source_orientation == NORTH)
-		|| (last_orientation == EAST && source_orientation == WEST)
-		|| (last_orientation == WEST && source_orientation == EAST)) {
-			result += "QQ";
-	} else if ((last_orientation == NORTH && source_orientation == EAST)
-		|| (last_orientation == EAST && source_orientation == SOUTH)
-		|| (last_orientation == SOUTH && source_orientation == WEST)
-		|| (last_orientation == WEST && source_orientation == NORTH)) {
-			result += "Q";
-	} else if ((last_orientation == NORTH && source_orientation == WEST)
-		|| (last_orientation == WEST && source_orientation == SOUTH)
-		|| (last_orientation == SOUTH && source_orientation == EAST)
-		|| (last_orientation == EAST && source_orientation == NORTH)) {
-			result += "E";
-	}
-	//result+=last_car;
-
-	//get all directions of the path in the result
-	return result;
-}
-
-bool mine_state::is_point_valid(position point, vector<position> *mine_map) {
-	bool is_valid = false;
-	if (PointInPolygon(point, *mine_map)) {
-		is_valid = true;
-		for (auto it = obstacles.begin(); it != obstacles.end(); ++it) {
-			if (PointInPolygon(point, *it)) {
-				is_valid = false;
-			}
-		}
-	}
-	return is_valid;
 }
 
 vector<string> mine_state::get_next_valid_command() {
