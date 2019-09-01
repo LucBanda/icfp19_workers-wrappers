@@ -185,12 +185,12 @@ vector<ListDigraph::Node> mine_navigator::get_node_list() {
 }
 
 vector<ListDigraph::Node> mine_navigator::get_bfs_from_node(ListDigraph::Node start, int depth) {
-	Bfs<ListDigraph> bfs(graph);
+	Dfs<ListDigraph> dfs(graph);
 	vector<ListDigraph::Node> result;
-	bfs.init();
-    bfs.addSource(start);
-    while (!bfs.emptyQueue() && (depth-- != 0 || depth == 0)) {
-      ListDigraph::Node v = bfs.processNextNode();
+	dfs.init();
+    dfs.addSource(start);
+    while (!dfs.emptyQueue() && (depth-- != 0 || depth == 0)) {
+      ListDigraph::Node v = graph.source(dfs.processNextArc());
 	  if (find(result.begin(), result.end(), v) == result.end())
 		result.push_back(v);
       //std::cout << g.id(v) << ": " << alg.dist(v) << std::endl;
