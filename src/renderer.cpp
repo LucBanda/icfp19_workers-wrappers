@@ -18,7 +18,7 @@
 
 #define TO_SCREEN(c)  SCREEN_W * (real(c) + 1) / SCALE, SCREEN_H - SCREEN_H * (imag(c) + 1) / SCALE
 
-#define SHAPE_SCALE	1.
+#define SHAPE_SCALE	2.
 const int SCREEN_W = 2000. / SHAPE_SCALE;
 const int SCREEN_H = 2000. / SHAPE_SCALE;
 
@@ -55,27 +55,27 @@ void renderer::draw() {
 	}
 
 	complex<double> robot_centered_pos(mine->robot.real() + 0.5, mine->robot.imag() + 0.5);
-	al_draw_filled_circle(TO_SCREEN(robot_centered_pos), 10, ME_COL);
+	al_draw_filled_circle(TO_SCREEN(robot_centered_pos), 10 / SHAPE_SCALE, ME_COL);
 	for (auto it = mine->relative_manipulators.begin(); it != mine->relative_manipulators.end(); ++it) {
 		complex<double> manip_centered_pos(mine->robot.real() + it->real() + 0.5, mine->robot.imag() + it->imag() + 0.5);
-		al_draw_circle(TO_SCREEN(manip_centered_pos), 2., ME_COL, 2.);
+		al_draw_circle(TO_SCREEN(manip_centered_pos), 2. / SHAPE_SCALE, ME_COL, 2.);
 	}
 
 	for (auto it = mine->drill_boosters.begin(); it != mine->drill_boosters.end(); ++it) {
 		complex<double> booster_centered_pos(it->real() + 0.5, it->imag() + 0.5);
-		al_draw_filled_circle(TO_SCREEN(booster_centered_pos), 10, DRILL_COL);
+		al_draw_filled_circle(TO_SCREEN(booster_centered_pos), 10 / SHAPE_SCALE, DRILL_COL);
 	}
 	for (auto it = mine->mystere_boosters.begin(); it != mine->mystere_boosters.end(); ++it) {
 		complex<double> booster_centered_pos(it->real() + 0.5, it->imag() + 0.5);
-		al_draw_filled_circle(TO_SCREEN(booster_centered_pos), 10, MYSTERIOUS_COL);
+		al_draw_filled_circle(TO_SCREEN(booster_centered_pos), 10 / SHAPE_SCALE, MYSTERIOUS_COL);
 	}
 	for (auto it = mine->fastwheels_boosters.begin(); it != mine->fastwheels_boosters.end(); ++it) {
 		complex<double> booster_centered_pos(it->real() + 0.5, it->imag() + 0.5);
-		al_draw_filled_circle(TO_SCREEN(booster_centered_pos), 10, FASTWHEEL_COL);
+		al_draw_filled_circle(TO_SCREEN(booster_centered_pos), 10 / SHAPE_SCALE, FASTWHEEL_COL);
 	}
 	for (auto it = mine->manipulators_boosters.begin(); it != mine->manipulators_boosters.end(); ++it) {
 		complex<double> booster_centered_pos(it->real() + 0.5, it->imag() + 0.5);
-		al_draw_filled_circle(TO_SCREEN(booster_centered_pos), 10, MANIP_COL);
+		al_draw_filled_circle(TO_SCREEN(booster_centered_pos), 10 / SHAPE_SCALE, MANIP_COL);
 	}
 
 }
