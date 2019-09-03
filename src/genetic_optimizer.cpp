@@ -140,9 +140,6 @@ MySolution genetic_optimizer::crossover(const MySolution& X1, const MySolution& 
 		new_nodes.insert(new_nodes.begin() + i, node);
 	}
 	X_new.node_list = new_nodes;
-	if (new_nodes.size() < 20) {
-		cout << "issue" << endl;
-	}
 
 	/*cout << "X1=";
 	for (int i = 0; i < X1.node_list.size(); i++)
@@ -201,7 +198,10 @@ genetic_optimizer::genetic_optimizer(int arg_instance) {
 
 	base_mine = new mine_state(instance_file.str());
 	navigator = new mine_navigator(base_mine);
-
+	EA::Chronometer timer;
+	timer.tic();
+	navigator->init_ordered_map();
+	cout << "time to init " << timer.toc() << endl;
 	ifstream file_to_test(filename);
 	if (!file_to_test.good()) {
 		cout << "file do not exist" << endl;

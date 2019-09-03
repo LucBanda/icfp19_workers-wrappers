@@ -124,7 +124,7 @@ bool mine_state::board_tile_is_wall(position tile) {
 
 typedef dim2::Point<int> Point;
 
-mine_navigator::mine_navigator(mine_state *base_mine): coord_map(graph), direction_map(graph), orientation_map(graph), length(graph)  {
+mine_navigator::mine_navigator(mine_state *base_mine): coord_map(graph), direction_map(graph), orientation_map(graph), length(graph), ordered_node_map(graph)  {
 	int i,j;
 	ListDigraph::NodeMap<Point> coords(graph);
 	ListDigraph::NodeMap<double> sizes(graph);
@@ -184,17 +184,31 @@ vector<ListDigraph::Node> mine_navigator::get_node_list() {
 	return result;
 }
 
+void mine_navigator::init_ordered_map() {
+	vector<ListDigraph::Node> list_node = get_node_list();
+
+	for (int it = 0; it < (int)list_node.size(); it++) {
+		Dfs<ListDigraph> dfs(graph);
+		vector<ListDigraph::Node> result;
+		dfs.init();
+		dfs.addSource(list_node[it]);
+		int depth = 3000;
+		//bfs.addSource(list_node[it]);
+		while (!dfs.emptyQueue() && depth--) {
+			ListDigraph::Node v = graph.source(dfs.processNextArc());
+			if (find(result.begin(), result.end(), v) == result.end())
+				result.push_back(v);
+		}
+		ordered_node_map[list_node[it]] = result;
+	}
+}
+
 vector<ListDigraph::Node> mine_navigator::get_bfs_from_node(ListDigraph::Node start, int depth) {
-	Dfs<ListDigraph> dfs(graph);
 	vector<ListDigraph::Node> result;
-	dfs.init();
-    dfs.addSource(start);
-    while (!dfs.emptyQueue() && (depth-- != 0 || depth == 0)) {
-      ListDigraph::Node v = graph.source(dfs.processNextArc());
-	  if (find(result.begin(), result.end(), v) == result.end())
-		result.push_back(v);
-      //std::cout << g.id(v) << ": " << alg.dist(v) << std::endl;
-    }
+	result = ordered_node_map[start];
+	if (depth < (int)result.size())
+		result.erase(result.begin() + depth, result.end());
+	return result;
 
 	/*Dfs<ListDigraph> dfs(graph);
 	vector<ListDigraph::Node> result;
@@ -379,6 +393,7 @@ mine_state::mine_state(string filename) {
 	relative_manipulators.push_back(position(1, 0));
 	relative_manipulators.push_back(position(1, 1));
 	relative_manipulators.push_back(position(1, -1));
+	relative_manipulators.push_back(position(0, 0));
 	//validate points
 	for (auto it = relative_manipulators.begin(); it != relative_manipulators.end(); ++it) {
 		position pos_to_remove = *it + robot;

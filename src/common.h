@@ -1,7 +1,6 @@
 #ifndef COMMON_H
 #define COMMON_H
 
-#include <allegro5/allegro.h>
 #include <functional>
 #include <stdlib.h>
 #include <iostream>
@@ -14,6 +13,7 @@
 #include <vector>
 #include <complex>
 #include <lemon/list_graph.h>
+#include <unistd.h>
 
 typedef std::complex<double> Complex;
 
