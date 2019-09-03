@@ -21,10 +21,11 @@
 #include <ctime>
 #include <cassert>
 #include <random>
-
-#include "gflags/gflags.h"
-#include "glog/logging.h"
+#include "unistd.h"
 #include "mine.h"
+#include <iomanip>
+#include <stdio.h>
+#include <fstream>
 
 using namespace std;
 
@@ -371,7 +372,6 @@ void printMoves(const vector<Move>& moves) {
 }
 
 int getDistanceToNearestDot(const State& state) {
-    const vector<string>& map = state.map;
     return 0;
 }
 
@@ -432,8 +432,6 @@ vector<Move> computeBestMoves(State state) {
 };
 
 vector<Move> solve(const State& initial_state) {
-    constexpr int LIMIT = 100;
-    int turns = 0;
     State state = initial_state;
     vector<Move> moves;
     while (!state.finished()) {
@@ -462,16 +460,32 @@ string output(const vector<Move> moves) {
 }
 
 int main(int argc, char** argv) {
-    gflags::ParseCommandLineFlags(&argc, &argv, true);
-    google::InitGoogleLogging(argv[0]);
-    google::InstallFailureSignalHandler();
+    int c;
+    int instance;
+    string filename;
+    while ((c = getopt(argc, argv, "hi:")) != -1)
+    switch (c) {
+			case 'i':
+				instance = atoi(optarg);
+				break;
+			case 'h':
+			default:
+				exit(0);
+				break;
+		}
+
+    filename = "./fuqresult/" + to_string(instance) + ".txt";
+	ostringstream instance_file;
+	if (instance == -1) instance_file << "./part-1-examples/example-01.desc";
+	else instance_file << "./part-1-initial/prob-"<< setw(3) << setfill('0') << instance << ".desc";
+
+	ifstream filesource(instance_file.str());
+
 
     std::string initial_boosters;
-    if (argc >= 2)
-        initial_boosters = std::string(argv[1]);
 
     std::string input = "";
-    std::getline(std::cin, input);
+    std::getline(filesource, input);
     std::vector<std::string> parts = splitAll(input, "#");
 
     Mine mine;
@@ -485,7 +499,12 @@ int main(int argc, char** argv) {
     state.print();
     vector<Move> moves = solve(state);
     std::string answer = output(moves);
-    std::cout << answer << std::endl;
+
+    std::ofstream output_file;
+    output_file.open(filename,
+					 std::ofstream::ate);
+    output_file << answer << std::endl;
+    output_file.close();
     std::cerr << "T: " << moves.size();
 
     return 0;
