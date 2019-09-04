@@ -356,6 +356,7 @@ struct State {
         }
     }
 
+
 };
 
 bool operator< (const State& lhs, const State& rhs) {
@@ -407,11 +408,6 @@ vector<Move> computeBestMoves(State state) {
             }
 
 
-            /*
-            std::random_device rd;
-            std::mt19937 g(rd());
-            std::shuffle(best_states[k+1].begin(), best_states[k+1].end(), g);
-            */
             std::sort(best_states[k+1].rbegin(), best_states[k+1].rend());
             if (best_states[k+1].size() > BEAM_WIDTH) {
                 best_states[k+1].erase(best_states[k+1].begin() + BEAM_WIDTH, best_states[k+1].end());
@@ -439,6 +435,7 @@ vector<Move> solve(const State& initial_state) {
         printMoves(best_moves);
         for (auto move : best_moves) {
             state = state.move(move.move_type).second;
+            //state.print();
         }
         moves.insert(moves.end(), best_moves.begin(), best_moves.end());
         state.print();
@@ -480,7 +477,6 @@ int main(int argc, char** argv) {
 	else instance_file << "./part-1-initial/prob-"<< setw(3) << setfill('0') << instance << ".desc";
 
 	ifstream filesource(instance_file.str());
-
 
     std::string initial_boosters;
 

@@ -21,10 +21,11 @@
 #include <ctime>
 #include <cassert>
 #include <random>
-
-#include "gflags/gflags.h"
-#include "glog/logging.h"
-#include "fuqinho-solver/mine.h"
+#include <iomanip>
+#include <stdio.h>
+#include <fstream>
+#include "mine.h"
+#include <unistd.h>
 
 using namespace std;
 
@@ -81,7 +82,7 @@ bool operator< (const Move& lhs, const Move& rhs) {
 // Choose move-0 for robot-0
 // Calculate the score.
 // Choose move-1 for robot-1
-// 
+//
 
 // Robot's basic behavior
 // 1. Determine the area to paint or booster to take. (BFS)
@@ -91,7 +92,7 @@ bool operator< (const Move& lhs, const Move& rhs) {
 
 // =========== OR ===========
 // Do the following every turn.
-// Determine the area to paint for each 
+// Determine the area to paint for each
 
 // Boosters:
 //   B: Use immediately.
@@ -184,7 +185,7 @@ struct State {
             if (c == 'R') R++;
             if (c == 'C') C++;
         }
-        
+
         map = std::vector<std::string>(H, std::string(W, '.'));
         painted = std::vector<std::vector<bool>>(H, std::vector<bool>(W, false));
 
@@ -402,17 +403,17 @@ struct State {
                     next_state.rL++;
                     next_state.gotL++;
                     next_state.map[next_y][next_x] = '.';
-                } 
+                }
                 if (map[next_y][next_x] == 'R') {
                     next_state.rR++;
                     next_state.gotR++;
                     next_state.map[next_y][next_x] = '.';
-                } 
+                }
                 if (map[next_y][next_x] == 'C') {
                     next_state.rC++;
                     next_state.gotC++;
                     next_state.map[next_y][next_x] = '.';
-                } 
+                }
                 next_state.paint();
             }
         } else if (move_type == 'E') { // clockwize
@@ -491,7 +492,7 @@ struct State {
             cerr << "R" << i << " ";
             if ((int)orders.size() > i) {
                 cerr << " mode:" << orders[i].mode << " ";
-                
+
             }
             cerr << " (" << robots[i].x << "," << robots[i].y << ") ";
             if ((int)orders.size() > i) {
@@ -503,7 +504,7 @@ struct State {
             cerr << "tB:" << robots[i].tB << " tF:" << robots[i].tF << endl;
         }
         vector<string> display = map;
-        
+
         REP (i, display.size()) REP(j, display[i].size()) {
             if (display[i][j] == '.' && painted[i][j]) {
                 display[i][j] = ' ';
@@ -569,7 +570,7 @@ vector<tuple<int, int>> findShortestPath(int x, int y, char tgt, const vector<st
                 continue;
             dist[ny][nx] = dist[cy][cx] + 1;
             que.push(make_tuple(nx, ny));
-        }    
+        }
     }
     vector<tuple<int, int>> path;
     if (foundX >= 0) {
@@ -589,7 +590,7 @@ vector<tuple<int, int>> findShortestPath(int x, int y, char tgt, const vector<st
         }
         reverse(path.begin(), path.end());
     }
-    /* 
+    /*
     cerr << "PATH: ";
     REP(i, path.size()) cerr << "(" << get<0>(path[i]) << "," << get<1>(path[i]) << ")";
     cerr << endl;
@@ -626,7 +627,7 @@ vector<tuple<int, int>> findShortestPathToNotOwnedEmptyCell(
                 continue;
             dist[ny][nx] = dist[cy][cx] + 1;
             que.push(make_tuple(nx, ny));
-        }    
+        }
     }
     vector<tuple<int, int>> path;
     if (foundX >= 0) {
@@ -646,7 +647,7 @@ vector<tuple<int, int>> findShortestPathToNotOwnedEmptyCell(
         }
         reverse(path.begin(), path.end());
     }
-    /* 
+    /*
     cerr << "PATH: ";
     REP(i, path.size()) cerr << "(" << get<0>(path[i]) << "," << get<1>(path[i]) << ")";
     cerr << endl;
@@ -661,7 +662,7 @@ pair<int, vector<vector<bool>>> fillByOwner(
         const State& state) {
     const int H = (int)owner_map.size();
     const int W = (int)owner_map[0].size();
-    
+
     vector<vector<bool>> res(H, vector<bool>(W, false));
     vector<vector<int>> dist(H, vector<int>(W, INF));
     queue<pair<int,int>> que;
@@ -678,7 +679,7 @@ pair<int, vector<vector<bool>>> fillByOwner(
         int x = que.front().first;
         int y = que.front().second;
         que.pop();
-        
+
         REP(k, 4) {
             int nx = x + DX[k];
             int ny = y + DY[k];
@@ -741,7 +742,7 @@ vector<tuple<int, pair<int,int>, vector<vector<bool>>>> findNotOwnedIslands(
                 continue;
             if (nd > max_dist)
                 continue;
-            
+
             dist[ny][nx] = nd;
             que.push(make_pair(nx, ny));
         }
@@ -836,7 +837,7 @@ vector<RobotOrder> computeRobotOrders(const State& state, const vector<RobotOrde
     int H = (int)state.map.size();
     int W = (int)state.map[0].size();
     int R = (int)state.robots.size();
-    
+
     vector<RobotOrder> robot_orders(prev_robot_orders);
     while ((int)robot_orders.size() < R)
         robot_orders.push_back(RobotOrder());
@@ -921,7 +922,7 @@ vector<RobotOrder> computeRobotOrders(const State& state, const vector<RobotOrde
             continue;
         int sx = state.robots[k].x;
         int sy = state.robots[k].y;
-        
+
         // debug
         robot_orders[k].mode = 'P';
         vector<vector<bool>> target_area(H, vector<bool>(W, false));
@@ -934,7 +935,7 @@ vector<RobotOrder> computeRobotOrders(const State& state, const vector<RobotOrde
     return robot_orders;
 }
 
-vector<RobotOrder> updateAfterMoves(const State& state, 
+vector<RobotOrder> updateAfterMoves(const State& state,
         const vector<RobotOrder>& prev_robot_orders, const vector<Move>& moves) {
     vector<RobotOrder> robot_orders(prev_robot_orders);
     int H = (int)state.map.size();
@@ -970,7 +971,7 @@ vector<RobotOrder> updateAfterMoves(const State& state,
                     if (robot_orders[k].reserved_moves.empty()) {
                         robot_orders[k].mode = 'W';
                     }
-  
+
                 }
             }
         } else if (robot_orders[k].mode == 'G') {
@@ -982,14 +983,14 @@ vector<RobotOrder> updateAfterMoves(const State& state,
             }
         }
     }
-    return robot_orders;    
+    return robot_orders;
 }
 
 vector<vector<Move>> computeBestMoves(const State& state, const vector<RobotOrder>& robot_orders) {
     int H = (int)state.map.size();
     int W = (int)state.map[0].size();
     int R = (int)state.robots.size();
-    
+
     vector<vector<Move>> robot_moves(R);
 
     // Get next move of each robots. (If they're not using boosters)
@@ -1010,7 +1011,7 @@ vector<vector<Move>> computeBestMoves(const State& state, const vector<RobotOrde
                 REP(i, 4) {
                     int nx = state.robots[k].x + DX[i];
                     int ny = state.robots[k].y + DY[i];
-                    if (nx == get<0>(robot_orders[k].target_path[path_idx+1]) && 
+                    if (nx == get<0>(robot_orders[k].target_path[path_idx+1]) &&
                             ny == get<1>(robot_orders[k].target_path[path_idx+1])) {
                         direction = DXY_DIR[i];
                         break;
@@ -1033,7 +1034,7 @@ vector<vector<Move>> computeBestMoves(const State& state, const vector<RobotOrde
                 REP(i, 4) {
                     int nx = state.robots[k].x + DX[i];
                     int ny = state.robots[k].y + DY[i];
-                    if (nx == get<0>(robot_orders[k].target_path[path_idx+1]) && 
+                    if (nx == get<0>(robot_orders[k].target_path[path_idx+1]) &&
                             ny == get<1>(robot_orders[k].target_path[path_idx+1])) {
                         direction = DXY_DIR[i];
                         break;
@@ -1073,7 +1074,7 @@ vector<vector<Move>> solve(const State& initial_state) {
     vector<RobotOrder> robot_orders;
     while (!state.finished()) {
         robot_orders = computeRobotOrders(state, robot_orders);
-        //state.print(robot_orders);
+        state.print(robot_orders);
         vector<vector<Move>> robot_moves = computeBestMoves(state, robot_orders);
         while (history.size() < robot_moves.size())
             history.push_back(vector<Move>());
@@ -1114,17 +1115,32 @@ string output(const vector<vector<Move>>& history) {
 
 int main(int argc, char** argv) {
     dis01 = std::uniform_real_distribution<>(0.0, 1.0);
-    gflags::ParseCommandLineFlags(&argc, &argv, true);
-    google::InitGoogleLogging(argv[0]);
-    google::InstallFailureSignalHandler();
 
+    int c;
+    int instance;
+    string filename;
+    while ((c = getopt(argc, argv, "hi:")) != -1)
+    switch (c) {
+			case 'i':
+				instance = atoi(optarg);
+				break;
+			case 'h':
+			default:
+				exit(0);
+				break;
+		}
+
+    filename = "./fuqresult/" + to_string(instance) + ".txt";
+	ostringstream instance_file;
+	if (instance == -1) instance_file << "./part-1-examples/example-01.desc";
+	else instance_file << "./part-1-initial/prob-"<< setw(3) << setfill('0') << instance << ".desc";
+
+	ifstream filesource(instance_file.str());
 
     std::string initial_boosters;
-    if (argc >= 2)
-        initial_boosters = std::string(argv[1]);
 
     std::string input = "";
-    std::getline(std::cin, input);
+    std::getline(filesource, input);
     std::vector<std::string> parts = splitAll(input, "#");
 
     Mine mine;
@@ -1153,14 +1169,19 @@ int main(int argc, char** argv) {
         clock_gettime(CLOCK_MONOTONIC, &ts);
         ll now = ts.tv_sec;
          gExcludedGoals.clear();
-        if (now - start >= 60)
+         std::cerr << now - start << endl;
+        if (now - start >= 10)
             break;
     }
 
     std::string answer = output(best_history);
-    std::cout << answer << std::endl;
+    std::ofstream output_file;
+    output_file.open(filename,
+					 std::ofstream::ate);
+    output_file << answer << std::endl;
+    output_file.close();
     std::cerr << "T: " << best_history[0].size();
-    
+
 
     return 0;
 }
