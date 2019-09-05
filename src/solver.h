@@ -29,6 +29,7 @@ class genetic_graph_splitter {
         ~genetic_graph_splitter();
         vector<vector<Node>> solve(int population_size);
         vector<vector<Node>> partition_graph_with_split(const vector<pair<Node, int>> &loc_split, double *score);
+        vector<vector<Node>> &fix_solution(vector<vector<Node>> &solution);
 
     private:
         bool eval_solution(const MySolution& p, MyMiddleCost& c);

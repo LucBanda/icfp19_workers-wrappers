@@ -151,6 +151,34 @@ genetic_graph_splitter::genetic_graph_splitter(mine_navigator *in_nav) {
 genetic_graph_splitter::~genetic_graph_splitter() {
 }
 
+vector<vector<Node>> &genetic_graph_splitter::fix_solution(vector<vector<Node>> &solution) {
+	ListDigraph::NodeMap<bool> filter(*graph, true);
+	ListDigraph::NodeMap<int> zoneMap(*graph);
+
+	for (int i = 0; i < solution.size(); i++) {
+		for (auto n:solution[i]) {
+			filter[n] = false;
+			zoneMap[n] = i;
+		}
+	}
+	lSubGraph subgraph(*graph, filter);
+	for (lSubGraph::NodeIt n(subgraph); n != INVALID; ++n) {
+		cout << "fixing one node" << endl;
+		Bfs<Graph> bfs(*graph);
+
+		bfs.init();
+		bfs.addSource(n);
+		while (!bfs.emptyQueue()) {
+			Node t = bfs.processNextNode();
+			if (filter[t] == false) {
+				solution[zoneMap[t]].push_back(n);
+				cout << "association to " << zoneMap[t]<< endl;
+				break;
+			}
+		}
+	}
+	return solution;
+}
 
 vector<vector<Node>> genetic_graph_splitter::solve(int population_size) {
 	using namespace std::placeholders;
@@ -184,7 +212,8 @@ vector<vector<Node>> genetic_graph_splitter::solve(int population_size) {
 
 	vector<pair<Node, int>> solution = ga_obj.last_generation.chromosomes[ga_obj.last_generation.best_chromosome_index].genes.split;
 
-	return partition_graph_with_split(solution, NULL);
+	vector<vector<Node>> soluce = partition_graph_with_split(solution, NULL);
+	return fix_solution(soluce);
 	//cout << "m= " << ga_obj.mutation_rate << ", c= " << ga_obj.crossover_fraction << ", e= " << ga_obj.elite_count << endl;
 }
 
@@ -262,7 +291,7 @@ int main(int argc, char** argv) {
 			genetic_graph_splitter optimizer(&nav);
 			optimizer.mine = &mine;
 			optimizer.instance = gInstance;
-			optimizer.nb_of_zones = 10;
+			optimizer.nb_of_zones = optimizer.nb_of_nodes / 50.;
 			vector<vector<position>> solution = nav.list_of_coords_from_nodes(optimizer.solve(population));
 			renderer render;
 			render.set_mine(&mine);
