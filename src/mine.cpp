@@ -158,7 +158,7 @@ mine_navigator::mine_navigator(mine_state *base_mine): coord_map(graph), directi
 	for (i = 0; i < base_mine->max_size_x; i++) {
 		for (j = 0; j < base_mine->max_size_y; j++) {
 			if (!base_mine->board_tile_is_wall(position(i,j))) {
-				ListDigraph::Node u = graph.addNode();
+				Node u = graph.addNode();
 				position currentpos(i,j);
 				coord_map[u] = currentpos;
 				if (currentpos == base_mine->robot) {
@@ -170,28 +170,28 @@ mine_navigator::mine_navigator(mine_state *base_mine): coord_map(graph), directi
 		}
 	}
 
-	for (ListDigraph::NodeIt n(graph); n != INVALID; ++n) {
-		for (ListDigraph::NodeIt v(graph); v != INVALID; ++v) {
+	for (NodeIt n(graph); n != INVALID; ++n) {
+		for (NodeIt v(graph); v != INVALID; ++v) {
 			if (coord_map[n] == position(coord_map[v].real()  + 1, coord_map[v].imag())) {
-				ListDigraph::Arc e = graph.addArc(n,v);
+				Arc e = graph.addArc(n,v);
 				direction_map[e] = 'D';
 				orientation_map[e] = EAST;
 				length[e] = 1;
 				acolors[e] = 0;
 			} else if (coord_map[n] == position(coord_map[v].real()  - 1, coord_map[v].imag())) {
-				ListDigraph::Arc e = graph.addArc(n,v);
+				Arc e = graph.addArc(n,v);
 				direction_map[e] = 'A';
 				orientation_map[e] = WEST;
 				length[e] = 1;
 				acolors[e] = 1;
 			} else if (coord_map[n] == position(coord_map[v].real(), coord_map[v].imag() - 1)) {
-				ListDigraph::Arc e = graph.addArc(n,v);
+				Arc e = graph.addArc(n,v);
 				direction_map[e] = 'S';
 				orientation_map[e] = SOUTH;
 				length[e] = 1;
 				acolors[e] = 2;
 			} else if (coord_map[n] == position(coord_map[v].real(), coord_map[v].imag() + 1)) {
-				ListDigraph::Arc e = graph.addArc(n,v);
+				Arc e = graph.addArc(n,v);
 				direction_map[e] = 'W';
 				orientation_map[e] = NORTH;
 				length[e] = 1;
@@ -201,7 +201,7 @@ mine_navigator::mine_navigator(mine_state *base_mine): coord_map(graph), directi
 	}
 }
 
-vector<vector<position>> mine_navigator::list_of_coords_from_nodes(const vector<vector<ListDigraph::Node>> liste) {
+vector<vector<position>> mine_navigator::list_of_coords_from_nodes(const vector<vector<Node>> liste) {
 	vector<vector<position>> result;
 	for (auto zone:liste) {
 		vector<position> interm_result;
@@ -212,25 +212,25 @@ vector<vector<position>> mine_navigator::list_of_coords_from_nodes(const vector<
 	}
 	return result;
 }
-vector<ListDigraph::Node> mine_navigator::get_node_list() {
-	vector<ListDigraph::Node> result;
-	for (ListDigraph::NodeIt n(graph); n != INVALID; ++n)
+vector<Node> mine_navigator::get_node_list() {
+	vector<Node> result;
+	for (NodeIt n(graph); n != INVALID; ++n)
 		result.push_back(n);
 	return result;
 }
 
 void mine_navigator::init_ordered_map() {
-	vector<ListDigraph::Node> list_node = get_node_list();
+	vector<Node> list_node = get_node_list();
 
 	for (int it = 0; it < (int)list_node.size(); it++) {
 		Bfs<ListDigraph> dfs(graph);
-		vector<ListDigraph::Node> result;
+		vector<Node> result;
 		dfs.init();
 		dfs.addSource(list_node[it]);
 		int depth = 3000;
 		//bfs.addSource(list_node[it]);
 		while (!dfs.emptyQueue() && depth--) {
-			ListDigraph::Node v = dfs.processNextNode();
+			Node v = dfs.processNextNode();
 			if (find(result.begin(), result.end(), v) == result.end())
 				result.push_back(v);
 		}
@@ -238,18 +238,18 @@ void mine_navigator::init_ordered_map() {
 	}
 }
 
-vector<ListDigraph::Node> mine_navigator::get_bfs_from_node(ListDigraph::Node start, int depth) {
-	vector<ListDigraph::Node> result;
+vector<Node> mine_navigator::get_bfs_from_node(Node start, int depth) {
+	vector<Node> result;
 	result = ordered_node_map[start];
 	if (depth < (int)result.size())
 		result.erase(result.begin() + depth, result.end());
 	return result;
 }
 
-string mine_navigator::goto_node(enum orientation source_orientation,enum orientation &last_orientation, ListDigraph::Node orig, ListDigraph::Node target, ListDigraph::Node *ending_node) {
+string mine_navigator::goto_node(enum orientation source_orientation,enum orientation &last_orientation, Node orig, Node target, Node *ending_node) {
 	string result;
 	string last_car = "";
-	ListDigraph::Arc last_arc;
+	Arc last_arc;
 
 	if (orig == target){
 		for (ListDigraph::InArcIt a(graph, orig); a != INVALID; ++a) {
@@ -277,7 +277,7 @@ string mine_navigator::goto_node(enum orientation source_orientation,enum orient
 
 	} else {
 		//apply dijkstra to graph
-		std::vector<ListDigraph::Arc> arcpath;
+		std::vector<Arc> arcpath;
 		Dijkstra<ListDigraph> dijkstra(graph, length);
 		dijkstra.run(target, orig);
 

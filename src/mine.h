@@ -27,18 +27,18 @@ class mine_navigator {
 	~mine_navigator() {};
 	void init_graph();
 	void init_ordered_map();
-	string goto_node(enum orientation source_orientation, enum orientation &last_orientation, ListDigraph::Node orig, ListDigraph::Node target, ListDigraph::Node *ending_node);
+	string goto_node(enum orientation source_orientation, enum orientation &last_orientation, Node orig, Node target, Node *ending_node);
 	//string orientcorrectly(enum orientation source_orientation, enum orientation target_orientation);
-	vector<ListDigraph::Node> get_node_list();
-	vector<ListDigraph::Node> get_bfs_from_node(ListDigraph::Node start, int depth);
-	vector<vector<position>> list_of_coords_from_nodes(const vector<vector<ListDigraph::Node>> list);
+	vector<Node> get_node_list();
+	vector<Node> get_bfs_from_node(Node start, int depth);
+	vector<vector<position>> list_of_coords_from_nodes(const vector<vector<Node>> list);
 	ListDigraph graph;
 	ListDigraph::NodeMap<position> coord_map;
 	ListDigraph::ArcMap<char> direction_map;
 	ListDigraph::ArcMap<enum orientation> orientation_map;
 	ListDigraph::ArcMap<int> length;
-	ListDigraph::Node initialNode;
-	ListDigraph::NodeMap<vector<ListDigraph::Node>> ordered_node_map;
+	Node initialNode;
+	ListDigraph::NodeMap<vector<Node>> ordered_node_map;
 };
 
 class mine_state {

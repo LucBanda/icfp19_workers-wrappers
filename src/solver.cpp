@@ -20,24 +20,20 @@ void genetic_graph_splitter::init_genes(MySolution& p, const std::function<doubl
 	nb_of_node_per_zone = nb_of_nodes / local_nb_of_zones;
 	while (local_nb_of_zones--) {
 		int nodeid = rnd01() * nb_of_nodes;
-		p.split.emplace_back(graph->nodeFromId(nodeid), nb_of_node_per_zone + nb_of_node_per_zone  / 10. * rnd01());
+		p.split.emplace_back(graph->nodeFromId(nodeid), nb_of_node_per_zone + nb_of_node_per_zone  / 4. * rnd01());
 	}
 }
 
-bool genetic_graph_splitter::eval_solution(const MySolution& p, MyMiddleCost& c) {
+vector<vector<Node>> genetic_graph_splitter::partition_graph_with_split(const vector<pair<Node, int>> &loc_split, double *score) {
 	ListDigraph::NodeMap<bool> filter(*graph, true);
+	vector<vector<Node>> result_total;
 
-	c.objective1 = 0;
-	for (auto patch:p.split) {
+	for (auto patch:loc_split) {
 		auto depth = patch.second;
-		//renderer render;
-		FilterNodes<ListDigraph> subgraph(*graph, filter);
-		Bfs<FilterNodes<ListDigraph>> bfs(subgraph);
-		//render.set_mine(mine);
-		//render.set_subgraph(nav, &subgraph);
+		lSubGraph subgraph(*graph, filter);
+		Bfs<lSubGraph> bfs(subgraph);
 		auto node = patch.first;
-		vector<ListDigraph::Node> result;
-		FilterNodes<ListDigraph>::NodeMap<bool> visit(subgraph, false);
+		vector<Node> result;
 
 		if (filter[node] == false) {
 			continue;
@@ -47,26 +43,29 @@ bool genetic_graph_splitter::eval_solution(const MySolution& p, MyMiddleCost& c)
 		int cnt = 0;
 		//bfs.addSource(list_node[it]);
 		while (!bfs.emptyQueue() && depth > 0) {
-			ListDigraph::Node n = bfs.processNextNode();
-			if (visit[n] == false) {
-				visit[n] = true;
-				//filter[n] = false;
+			Node n = bfs.processNextNode();
+			if (filter[n] == true) {
+				filter[n] = false;
 				result.push_back(n);
 				depth--;
 				cnt++;
 			}
 		}
-		for (auto n:result) {
-			filter[n] = false;
+		result_total.push_back(result);
+		if (score) *score += abs(nb_of_node_per_zone - cnt);
+	}
+	if (score) {
+		for (NodeIt n(*graph); n != INVALID; ++n) {
+			if (filter[n])
+				*score += nb_of_nodes * nb_of_nodes;
 		}
-		c.objective1 += abs(nb_of_node_per_zone - cnt);
-	//	render.mainLoop();
 	}
+	return result_total;
+}
 
-	for (ListDigraph::NodeIt n(*graph); n != INVALID; ++n) {
-		if (filter[n])
-			c.objective1 += nb_of_nodes * nb_of_nodes;
-	}
+bool genetic_graph_splitter::eval_solution(const MySolution& p, MyMiddleCost& c) {
+	c.objective1 = 0;
+	partition_graph_with_split(p.split, &c.objective1);
 	return true;
 }
 
@@ -77,10 +76,10 @@ MySolution genetic_graph_splitter::mutate(const MySolution& X_base,
 	/*cout << "mutate :" << endl;
 	cout << "base = " << X_base.to_string(this) << endl;*/
 	int index = rnd01() * X_base.split.size();
-	pair<ListDigraph::Node, int> patch = X_base.split[index];
-	ListDigraph::Node node = patch.first;
+	pair<Node, int> patch = X_base.split[index];
+	Node node = patch.first;
 	int nb = patch.second;
-	//pair<ListDigraph::Node, int> node_to_mutate = patch;
+	//pair<Node, int> node_to_mutate = patch;
 	int index_of_node = rnd01() * nb_of_nodes;
 	node = graph->nodeFromId(index_of_node);
 	nb += (-10. + 20. * rnd01());
@@ -146,14 +145,14 @@ genetic_graph_splitter::genetic_graph_splitter(mine_navigator *in_nav) {
 	nav = in_nav;
 	graph = &nav->graph;
 	nb_of_nodes =0;
-	for (ListDigraph::NodeIt n(*graph); n != INVALID; ++n)
+	for (NodeIt n(*graph); n != INVALID; ++n)
 		nb_of_nodes++;
 }
 genetic_graph_splitter::~genetic_graph_splitter() {
 }
 
 
-vector<vector<position>> genetic_graph_splitter::solve(int population_size) {
+vector<vector<Node>> genetic_graph_splitter::solve(int population_size) {
 	using namespace std::placeholders;
 
 	EA::Chronometer timer;
@@ -183,36 +182,9 @@ vector<vector<position>> genetic_graph_splitter::solve(int population_size) {
 	cout << "cause: " << ga_obj.stop_reason_to_string(reason)
 			<< endl;
 
-	vector<pair<ListDigraph::Node, int>> solution = ga_obj.last_generation.chromosomes[ga_obj.last_generation.best_chromosome_index].genes.split;
-	vector<vector<position>> result_total;
-	ListDigraph::NodeMap<bool> filter(*graph, true);
+	vector<pair<Node, int>> solution = ga_obj.last_generation.chromosomes[ga_obj.last_generation.best_chromosome_index].genes.split;
 
-	for (auto patch:solution) {
-		auto depth = patch.second;
-
-		FilterNodes<ListDigraph> subgraph(*graph, filter);
-		Bfs<FilterNodes<ListDigraph>> bfs(subgraph);
-		auto node = subgraph.nodeFromId(graph->id(patch.first));
-		vector<position> result;
-		if (filter[node] == false) {
-			continue;
-		}
-		bfs.init();
-		bfs.addSource(node);
-
-		//bfs.addSource(list_node[it]);
-		while (!bfs.emptyQueue() && depth > 0) {
-			ListDigraph::Node n = bfs.processNextNode();
-			if (filter[n] == true) {
-				result.push_back(nav->coord_map[n]);
-				filter[n] = false;
-				depth--;
-			}
-		}
-		result_total.push_back(result);
-	}
-
-	return result_total;
+	return partition_graph_with_split(solution, NULL);
 	//cout << "m= " << ga_obj.mutation_rate << ", c= " << ga_obj.crossover_fraction << ", e= " << ga_obj.elite_count << endl;
 }
 
@@ -231,10 +203,10 @@ static void print_help() {
 		"	-d : enable logging of chromosomes in a file\n");
 }
 
-static vector<vector<ListDigraph::Node>> bipartite_until(const ListDigraph &graph, int until_size) {
-	vector<vector<ListDigraph::Node>> result;
+/*static vector<vector<Node>> bipartite_until(const ListDigraph &graph, int until_size) {
+	vector<vector<Node>> result;
 	return result;
-}
+}*/
 
 int main(int argc, char** argv) {
 	bool do_all = false;
@@ -291,7 +263,7 @@ int main(int argc, char** argv) {
 			optimizer.mine = &mine;
 			optimizer.instance = gInstance;
 			optimizer.nb_of_zones = 10;
-			vector<vector<position>> solution = optimizer.solve(population);
+			vector<vector<position>> solution = nav.list_of_coords_from_nodes(optimizer.solve(population));
 			renderer render;
 			render.set_mine(&mine);
 			render.set_zones(&solution);

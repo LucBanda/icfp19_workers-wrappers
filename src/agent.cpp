@@ -14,13 +14,13 @@ void agent::set_execution_map(string exec) {
 
 }
 
-string agent::execution_map_from_node_list(vector<ListDigraph::Node> list_node) {
+string agent::execution_map_from_node_list(vector<Node> list_node) {
 	string result;
-	ListDigraph::Node last_node = navigator->initialNode;
+	Node last_node = navigator->initialNode;
 	enum orientation result_orientation;
 
 	for (auto it = list_node.begin(); it != list_node.end(); ++it) {
-		ListDigraph::Node endingnode;
+		Node endingnode;
 		position target_pos = navigator->coord_map[*it];
 		if (mine->board_tile_is_painted(target_pos)) {
 			continue;

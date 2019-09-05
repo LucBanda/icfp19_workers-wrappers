@@ -91,7 +91,7 @@ int main(int argc, char** argv) {
 		}
 
 		//test
-		/*vector<ListDigraph::Node> test_list;
+		/*vector<Node> test_list;
 		test_list = navigator.get_node_list();
 
 		string execution = status.ag->execution_map_from_node_list(test_list);

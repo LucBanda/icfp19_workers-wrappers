@@ -27,7 +27,8 @@ class genetic_graph_splitter {
         int instance;
         genetic_graph_splitter(mine_navigator *in_nav);
         ~genetic_graph_splitter();
-        vector<vector<position>> solve(int population_size);
+        vector<vector<Node>> solve(int population_size);
+        vector<vector<Node>> partition_graph_with_split(const vector<pair<Node, int>> &loc_split, double *score);
 
     private:
         bool eval_solution(const MySolution& p, MyMiddleCost& c);
@@ -44,7 +45,7 @@ class genetic_graph_splitter {
 };
 
 struct MySolution {
-	vector<pair<ListDigraph::Node, int>> split;
+	vector<pair<Node, int>> split;
 
 	string to_string(genetic_graph_splitter * optim) const {
         ostringstream res;

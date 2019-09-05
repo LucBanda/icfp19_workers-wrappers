@@ -16,7 +16,7 @@ class agent {
 	double get_cost();
 	void step();
 	void set_execution_map(string map);
-	string execution_map_from_node_list(vector<ListDigraph::Node> node_list);
+	string execution_map_from_node_list(vector<Node> node_list);
 
 	int run();
 	enum orientation current_orientation = EAST;

@@ -42,7 +42,7 @@ class genetic_optimizer {
 };
 
 struct MySolution {
-	vector<ListDigraph::Node> node_list;
+	vector<Node> node_list;
 
 	string to_string(genetic_optimizer * optim) const {
         mine_state mine(optim->base_mine);
