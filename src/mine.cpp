@@ -122,6 +122,30 @@ bool mine_state::board_tile_is_wall(position tile) {
 	return BOARD_TILE_IS_WALL(tile);
 }
 
+vector<position> mine_state::absolute_manipulators() {
+	vector<position> result;
+
+	for (auto &it:relative_manipulators) {
+		switch(current_orientation) {
+		case NORTH:
+			result.push_back(it);
+			break;
+		case SOUTH:
+			result.push_back(-it);
+			break;
+		case WEST:
+			result.emplace_back(-it.imag(), it.real());
+			break;
+		case EAST:
+			result.emplace_back(it.imag(), -it.real());
+			break;
+		default:
+			break;
+		}
+	}
+	return result;
+}
+
 typedef dim2::Point<int> Point;
 
 mine_navigator::mine_navigator(mine_state *base_mine): coord_map(graph), direction_map(graph), orientation_map(graph), length(graph), ordered_node_map(graph)  {
@@ -177,6 +201,17 @@ mine_navigator::mine_navigator(mine_state *base_mine): coord_map(graph), directi
 	}
 }
 
+vector<vector<position>> mine_navigator::list_of_coords_from_nodes(const vector<vector<ListDigraph::Node>> liste) {
+	vector<vector<position>> result;
+	for (auto zone:liste) {
+		vector<position> interm_result;
+		for (auto n:zone) {
+			interm_result.push_back(coord_map[n]);
+		}
+		result.push_back(interm_result);
+	}
+	return result;
+}
 vector<ListDigraph::Node> mine_navigator::get_node_list() {
 	vector<ListDigraph::Node> result;
 	for (ListDigraph::NodeIt n(graph); n != INVALID; ++n)
@@ -188,14 +223,14 @@ void mine_navigator::init_ordered_map() {
 	vector<ListDigraph::Node> list_node = get_node_list();
 
 	for (int it = 0; it < (int)list_node.size(); it++) {
-		Dfs<ListDigraph> dfs(graph);
+		Bfs<ListDigraph> dfs(graph);
 		vector<ListDigraph::Node> result;
 		dfs.init();
 		dfs.addSource(list_node[it]);
 		int depth = 3000;
 		//bfs.addSource(list_node[it]);
 		while (!dfs.emptyQueue() && depth--) {
-			ListDigraph::Node v = graph.source(dfs.processNextArc());
+			ListDigraph::Node v = dfs.processNextNode();
 			if (find(result.begin(), result.end(), v) == result.end())
 				result.push_back(v);
 		}
@@ -208,31 +243,6 @@ vector<ListDigraph::Node> mine_navigator::get_bfs_from_node(ListDigraph::Node st
 	result = ordered_node_map[start];
 	if (depth < (int)result.size())
 		result.erase(result.begin() + depth, result.end());
-	return result;
-
-	/*Dfs<ListDigraph> dfs(graph);
-	vector<ListDigraph::Node> result;
-	dfs.init();
-    dfs.addSource(start);
-    while (!dfs.emptyQueue() && (depth-- != 0 || depth == 0)) {
-      ListDigraph::Arc a = dfs.processNextArc();
-	  if (find(result.begin(), result.end(), graph.source(a)) == result.end())
-		result.push_back(graph.source(a));*/
-
-	/*vector<ListDigraph::Node> result;
-	vector<ListDigraph::Node> fifo;
-	fifo.push_back(start);
-	while (depth-- != 0) {
-		vector<ListDigraph::Node> level_nodes = fifo;
-		fifo.clear();
-		for (auto it = level_nodes.begin(); it != level_nodes.end(); ++it) {
-			result.push_back(*it);
-			for (ListDigraph::InArcIt a(graph, *it); a != INVALID; ++a) {
-				if (find(result.begin(), result.end(), graph.source(a)) == result.end())
-					fifo.push_back(graph.source(a));
-			}
-		}
-	}*/
 	return result;
 }
 
@@ -286,7 +296,7 @@ string mine_navigator::goto_node(enum orientation source_orientation,enum orient
 		}
 		result.pop_back();
 	}
-
+	//mine->apply_command(result);
 	// orient corrctly;
 	if ((last_orientation == NORTH && source_orientation == SOUTH)
 		|| (last_orientation == SOUTH && source_orientation == NORTH)
@@ -390,14 +400,16 @@ mine_state::mine_state(string filename) {
 			}
 		}
 	}
-	relative_manipulators.push_back(position(1, 0));
+	relative_manipulators.push_back(position(0, 1));
 	relative_manipulators.push_back(position(1, 1));
-	relative_manipulators.push_back(position(1, -1));
+	relative_manipulators.push_back(position(-1, 1));
 	relative_manipulators.push_back(position(0, 0));
 	//validate points
-	for (auto it = relative_manipulators.begin(); it != relative_manipulators.end(); ++it) {
+	current_orientation = EAST;
+	vector<position> absolute_manip = absolute_manipulators();
+	for (auto it = absolute_manip.begin(); it != absolute_manip.end(); ++it) {
 		position pos_to_remove = *it + robot;
-		if (board[pos_to_remove.real()][pos_to_remove.imag()] == EMPTY) {
+		if (!board_tile_is_wall(pos_to_remove)) {
 			non_validated_tiles--;
 			BOARD_TILE(pos_to_remove) = PAINTED;
 		}
@@ -407,7 +419,6 @@ mine_state::mine_state(string filename) {
 	owned_manipulators_boosters = 0;
 	time_step = 0;
 	distance_loss = 0;
-	current_orientation = EAST;
 	//init_graph();
 }
 
@@ -436,6 +447,7 @@ vector<string> mine_state::get_next_valid_command() {
 	return ret;
 }
 
+const vector<position> additionnal_manipulators = {position(0, -1), position(2, 1), position(1,2), position(0, -2)};
 string mine_state::strip(string commands) {
 	string ret = "";
 
@@ -489,15 +501,18 @@ void mine_state::apply_command(string command) {
 			new_pos = robot + position(1,0);
 			break;
 		case 'E':
-			for (unsigned int j = 0; j < relative_manipulators.size(); j++) {
+			current_orientation = (enum orientation)((current_orientation + 1) % 4);
+			/*for (unsigned int j = 0; j < relative_manipulators.size(); j++) {
 				relative_manipulators[j] = position(relative_manipulators[j].imag(), -relative_manipulators[j].real());
-			}
+			}*/
 			time_step++;
 			break;
 		case 'Q':
-			for (unsigned int j = 0; j < relative_manipulators.size(); j++) {
+			current_orientation = (enum orientation)(current_orientation == NORTH ? WEST: current_orientation - 1);
+			//current_orientation = (enum orientation)((current_orientation - 1));
+			/*for (unsigned int j = 0; j < relative_manipulators.size(); j++) {
 				relative_manipulators[j] = position(-relative_manipulators[j].imag(), relative_manipulators[j].real());
-			}
+			}*/
 			time_step++;
 			break;
 		}
@@ -514,7 +529,8 @@ void mine_state::apply_command(string command) {
 
 		//validate tiles
 		bool validated = false;
-		for (auto it = relative_manipulators.begin(); it != relative_manipulators.end(); ++it) {
+		auto absolute_manip = absolute_manipulators();
+		for (auto it = absolute_manip.begin(); it != absolute_manip.end(); ++it) {
 			position pos_to_remove = *it + robot;
 			if (BOARD_TILE_IS_EMPTY(pos_to_remove)) {
 				non_validated_tiles--;
@@ -540,6 +556,7 @@ void mine_state::apply_command(string command) {
 		if (pos_to_remove != manipulators_boosters.end()){
 			manipulators_boosters.erase(pos_to_remove);
 			owned_manipulators_boosters += 1;
+			relative_manipulators.push_back(additionnal_manipulators[owned_manipulators_boosters - 1]);
 		}
 		//collect fast booster
 		pos_to_remove = find(fastwheels_boosters.begin(), fastwheels_boosters.end(), robot);

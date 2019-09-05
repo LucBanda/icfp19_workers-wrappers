@@ -41,7 +41,7 @@ int main(int argc, char** argv) {
 	string exec;
 	string fileName = "";
 
-	while ((c = getopt(argc, argv, "f:r:ahli:")) != -1) switch (c) {
+	while ((c = getopt(argc, argv, "f:r:ahli:p:")) != -1) switch (c) {
 			case 'l':
 				load_result = true;
 				break;
@@ -53,6 +53,8 @@ int main(int argc, char** argv) {
 				break;
 			case 'f':
 				fileName = optarg;
+				break;
+			case 'p':
 				break;
 			case 'h':
 			default:
@@ -98,7 +100,7 @@ int main(int argc, char** argv) {
 		*/
 		render->idle = &idle;
 		render->idle_param = &status;
-		render->mainLoop(NULL);
+		render->mainLoop();
 
 		cout << "time_step " << status.mine->time_step << endl;
 		cout << "score " << status.ag->get_cost()<< endl;

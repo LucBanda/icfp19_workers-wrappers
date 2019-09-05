@@ -31,7 +31,7 @@ class mine_navigator {
 	//string orientcorrectly(enum orientation source_orientation, enum orientation target_orientation);
 	vector<ListDigraph::Node> get_node_list();
 	vector<ListDigraph::Node> get_bfs_from_node(ListDigraph::Node start, int depth);
-
+	vector<vector<position>> list_of_coords_from_nodes(const vector<vector<ListDigraph::Node>> list);
 	ListDigraph graph;
 	ListDigraph::NodeMap<position> coord_map;
 	ListDigraph::ArcMap<char> direction_map;
@@ -55,6 +55,7 @@ class mine_state {
 	string strip(string commands);
 	bool board_tile_is_painted(position tile);
 	bool board_tile_is_wall(position tile);
+	vector<position> absolute_manipulators();
 
 	int non_validated_tiles;
 	enum map_tile **board;

@@ -1170,7 +1170,7 @@ int main(int argc, char** argv) {
         ll now = ts.tv_sec;
          gExcludedGoals.clear();
          std::cerr << now - start << endl;
-        if (now - start >= 10)
+        if (now - start >= 60)
             break;
     }
 

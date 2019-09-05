@@ -196,12 +196,17 @@ genetic_optimizer::genetic_optimizer(int arg_instance) {
 	if (instance == -1) instance_file << "./part-1-examples/example-01.desc";
 	else instance_file << "./part-1-initial/prob-"<< setw(3) << setfill('0') << instance << ".desc";
 
-	base_mine = new mine_state(instance_file.str());
-	navigator = new mine_navigator(base_mine);
 	EA::Chronometer timer;
 	timer.tic();
+	base_mine = new mine_state(instance_file.str());
+	cout << "time to load mine " << timer.toc() << endl;
+	timer.tic();
+	navigator = new mine_navigator(base_mine);
+	cout << "time to init graph " << timer.toc() << endl;
+	timer.tic();
 	navigator->init_ordered_map();
-	cout << "time to init " << timer.toc() << endl;
+	cout << "time to populate map " << timer.toc() << endl;
+
 	ifstream file_to_test(filename);
 	if (!file_to_test.good()) {
 		cout << "file do not exist" << endl;
@@ -278,14 +283,10 @@ int main(int argc, char** argv) {
 	bool do_all = false;
 	int start_instance = 0;
 	int c;
-	bool continue_after_stall = false;
 	int population = 2000;
-	int fuel_factor = 2.;
-	int nb_of_thrusts = 1;
 	int gInstance = 0;
-	bool verbose_chromosomes = false;
 
-	while ((c = getopt(argc, argv, "vdf:p:n:a:hci:")) != -1) switch (c) {
+	while ((c = getopt(argc, argv, "p:a:hi:")) != -1) switch (c) {
 			case 'i':
 				gInstance = atoi(optarg);
 				break;
@@ -293,20 +294,8 @@ int main(int argc, char** argv) {
 				do_all = true;
 				start_instance = atoi(optarg);
 				break;
-			case 'c':
-				continue_after_stall = true;
-				break;
-			case 'n':
-				nb_of_thrusts = atoi(optarg);
-				break;
-			case 'f':
-				fuel_factor = atoi(optarg);
-				break;
 			case 'p':
 				population = atoi(optarg);
-				break;
-			case 'v':
-				verbose_chromosomes = true;
 				break;
 			case 'h':
 			default:
@@ -319,13 +308,10 @@ int main(int argc, char** argv) {
 			gInstance = i;
 		}
 
-		do {
-			genetic_optimizer optimizer(gInstance);
+		genetic_optimizer optimizer(gInstance);
 
-			bool solved = optimizer.solve(population);
-			if (solved) break;
-
-		} while (continue_after_stall);
+		bool solved = optimizer.solve(population);
+		if (solved) break;
 
 		if (!do_all) {
 			return 0;

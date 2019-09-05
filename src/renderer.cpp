@@ -7,7 +7,7 @@
 
 #define MAP_RES 3000
 
-#define BOULDER_COL al_map_rgb(100, 100, 100)
+#define BOULDER_COL al_map_rgb(0, 0, 0)
 #define ME_COL al_map_rgb(200, 0, 0)
 #define FASTWHEEL_COL al_map_rgb(150, 50, 50)
 #define MYSTERIOUS_COL al_map_rgb(50, 50, 200)
@@ -15,10 +15,11 @@
 #define MANIP_COL al_map_rgb(220, 220, 0)
 #define WHITE_COL al_map_rgb(250, 250, 250)
 #define YELLOW_COL al_map_rgb(200, 200, 50)
+#define RED_COL al_map_rgb(200, 0, 0)
 
 #define TO_SCREEN(c)  SCREEN_W * (real(c) + 1) / SCALE, SCREEN_H - SCREEN_H * (imag(c) + 1) / SCALE
 
-#define SHAPE_SCALE	2.
+#define SHAPE_SCALE	1.
 const int SCREEN_W = 2000. / SHAPE_SCALE;
 const int SCREEN_H = 2000. / SHAPE_SCALE;
 
@@ -32,6 +33,9 @@ renderer::renderer() {
 	scale_edited = false;
 	step_it = false;
 	run_under_step = false;
+	zones = NULL;
+	idle_param = NULL;
+	nav = NULL;
 }
 
 double start_radius = 0;
@@ -40,23 +44,30 @@ void renderer::draw() {
 	SCALE = max(mine->max_size_x + 2, mine->max_size_y + 2);
 	al_draw_filled_rectangle(0, 0, SCREEN_W, SCREEN_H, BOULDER_COL);
 
-	for (int i = 0; i < mine->max_size_x ; i++) {
-		for (int j = 0; j < mine->max_size_y; j++) {
-			position to_screen_pos(TO_SCREEN(position(i,j)));
-			if (mine->board[i][j] == WALL) {
-				al_draw_filled_rectangle(TO_SCREEN(position(i,j)), TO_SCREEN(position(i,j) + position(1,1)), BOULDER_COL);
-			} else if (mine->board[i][j] == EMPTY) {
-				al_draw_filled_rectangle(TO_SCREEN(position(i,j)), TO_SCREEN(position(i,j) + position(1,1)), WHITE_COL);
-			} else if (mine->board[i][j] == PAINTED) {
-				al_draw_filled_rectangle(TO_SCREEN(position(i,j)), TO_SCREEN(position(i,j) + position(1,1)), YELLOW_COL);
-			}
+	if (!nav) {
+		for (int i = 0; i < mine->max_size_x ; i++) {
+			for (int j = 0; j < mine->max_size_y; j++) {
+				if (mine->board[i][j] == WALL) {
+					al_draw_filled_rectangle(TO_SCREEN(position(i,j)), TO_SCREEN(position(i,j) + position(1,1)), BOULDER_COL);
+				} else if (mine->board[i][j] == EMPTY) {
+					al_draw_filled_rectangle(TO_SCREEN(position(i,j)), TO_SCREEN(position(i,j) + position(1,1)), WHITE_COL);
+				} else if (mine->board[i][j] == PAINTED) {
+					al_draw_filled_rectangle(TO_SCREEN(position(i,j)), TO_SCREEN(position(i,j) + position(1,1)), YELLOW_COL);
+				}
 
+			}
+		}
+	} else {
+		for (FilterNodes<ListDigraph>::NodeIt it(*subgraph); it != INVALID; ++it) {
+				position to_screen_pos(TO_SCREEN(nav->coord_map[it]));
+				al_draw_filled_rectangle(TO_SCREEN(nav->coord_map[it]), TO_SCREEN(nav->coord_map[it] + position(1,1)), WHITE_COL);
 		}
 	}
 
 	complex<double> robot_centered_pos(mine->robot.real() + 0.5, mine->robot.imag() + 0.5);
 	al_draw_filled_circle(TO_SCREEN(robot_centered_pos), 10 / SHAPE_SCALE, ME_COL);
-	for (auto it = mine->relative_manipulators.begin(); it != mine->relative_manipulators.end(); ++it) {
+	vector<position> absolute_manipulators = mine->absolute_manipulators();
+	for (auto it = absolute_manipulators.begin(); it != absolute_manipulators.end(); ++it) {
 		complex<double> manip_centered_pos(mine->robot.real() + it->real() + 0.5, mine->robot.imag() + it->imag() + 0.5);
 		al_draw_circle(TO_SCREEN(manip_centered_pos), 2. / SHAPE_SCALE, ME_COL, 2.);
 	}
@@ -77,11 +88,33 @@ void renderer::draw() {
 		complex<double> booster_centered_pos(it->real() + 0.5, it->imag() + 0.5);
 		al_draw_filled_circle(TO_SCREEN(booster_centered_pos), 10 / SHAPE_SCALE, MANIP_COL);
 	}
+	int grey = 50;
+	if (zones) {
+		for (int i = 0; i < mine->max_size_x ; i++) {
+			for (int j = 0; j < mine->max_size_y; j++) {
+				position to_screen_pos(TO_SCREEN(position(i,j)));
+				if (mine->board[i][j] == WALL) {
+					al_draw_filled_rectangle(TO_SCREEN(position(i,j)), TO_SCREEN(position(i,j) + position(1,1)), BOULDER_COL);
+				} else if (mine->board[i][j] == EMPTY) {
+					al_draw_filled_rectangle(TO_SCREEN(position(i,j)), TO_SCREEN(position(i,j) + position(1,1)), RED_COL);
+				} else if (mine->board[i][j] == PAINTED) {
+					al_draw_filled_rectangle(TO_SCREEN(position(i,j)), TO_SCREEN(position(i,j) + position(1,1)), RED_COL);
+				}
 
+			}
+		}
+		for (auto zone:*zones) {
+			for (auto pixel:zone) {
+				al_draw_filled_rectangle(TO_SCREEN(pixel), TO_SCREEN(pixel + position(1,1)), al_map_rgba(grey, grey, grey, 255));
+			}
+		grey += 50;
+		}
+
+	}
 }
 
 enum MYKEYS { KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_R};
-void renderer::mainLoop(void *params) {
+void renderer::mainLoop() {
 	ALLEGRO_DISPLAY *display = NULL;
 	ALLEGRO_EVENT_QUEUE *event_queue = NULL;
 	ALLEGRO_TIMER *timer = NULL;
@@ -145,7 +178,7 @@ void renderer::mainLoop(void *params) {
 			//i += 1;
 			//if (i > draw_decimation) {
 			if (!step_it || run_under_step) {
-				doexit = idle(idle_param);
+				if (idle_param != NULL) doexit = idle(idle_param);
 				run_under_step = false;
 			}
 			//	i = 0;
