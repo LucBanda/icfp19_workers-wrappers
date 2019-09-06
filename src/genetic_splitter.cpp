@@ -16,7 +16,7 @@ using std::endl;
 using std::string;
 
 void genetic_graph_splitter::init_genes(
-	MySolution& p, const std::function<double(void)>& rnd01) {
+	genetic_graph_splitter::MySolution& p, const std::function<double(void)>& rnd01) {
 	int local_nb_of_zones = nb_of_zones;
 	nb_of_node_per_zone = nb_of_nodes / local_nb_of_zones;
 	while (local_nb_of_zones--) {
@@ -71,8 +71,8 @@ bool genetic_graph_splitter::eval_solution(const MySolution& p,
 	return true;
 }
 
-MySolution genetic_graph_splitter::mutate(
-	const MySolution& X_base, const std::function<double(void)>& rnd01,
+genetic_graph_splitter::MySolution genetic_graph_splitter::mutate(
+	const genetic_graph_splitter::MySolution& X_base, const std::function<double(void)>& rnd01,
 	double shrink_scale) {
 	MySolution X_new = X_base;
 	int index = rnd01() * X_base.split.size();
@@ -92,10 +92,10 @@ MySolution genetic_graph_splitter::mutate(
 	return X_new;
 }
 
-MySolution genetic_graph_splitter::crossover(
-	const MySolution& X1, const MySolution& X2,
+genetic_graph_splitter::MySolution genetic_graph_splitter::crossover(
+	const genetic_graph_splitter::MySolution& X1, const MySolution& X2,
 	const std::function<double(void)>& rnd01) {
-	MySolution X_new;
+	genetic_graph_splitter::MySolution X_new;
 	int index_to_split = X1.split.size() * rnd01();
 	for (int i = 0; i < X1.split.size(); i++) {
 		if (i < index_to_split)
@@ -115,12 +115,10 @@ double genetic_graph_splitter::calculate_SO_total_fitness(
 	return final_cost;
 }
 
-std::ofstream output_file;
-
 void genetic_graph_splitter::SO_report_generation(
 	int generation_number,
 	const EA::GenerationType<MySolution, MyMiddleCost>& last_generation,
-	const MySolution& best_genes) {
+	const genetic_graph_splitter::MySolution& best_genes) {
 	cout << "instance = " << instance << ", "
 		 << "Generation [" << generation_number << "], " << setprecision(10)
 		 << "Best=" << -last_generation.best_total_cost << ", "
@@ -278,79 +276,4 @@ vector<vector<Node>> global_graph_splitter::solve(int population) {
 	cout << endl;
 
 	return final_sol;
-}
-
-static void print_help() {
-	printf(
-		"options: \n"
-		"	-h : this help \n"
-		"	-i instance: instance of the problem to display \n"
-		"	-l : load the best solution so far for this problem \n"
-		"	-a from: do all problem from \"from\"\n"
-		"	-n number: number of thrust to optimize (default 1)\n"
-		"	-f factor: divider of fuel max to limit thrust range (default is "
-		"2)\n"
-		"	-p population: population of each generation (default 2000)\n"
-		"	-d : enable logging of chromosomes in a file\n");
-}
-
-int main(int argc, char** argv) {
-	bool do_all = false;
-	int start_instance = 0;
-	int c;
-	int population = 2000;
-	int gInstance = 0;
-	bool display = false;
-
-	while ((c = getopt(argc, argv, "dp:a:hi:")) != -1) switch (c) {
-			case 'i':
-				gInstance = atoi(optarg);
-				break;
-			case 'a':
-				do_all = true;
-				start_instance = atoi(optarg);
-				break;
-			case 'd':
-				display = true;
-				break;
-			case 'p':
-				population = atoi(optarg);
-				break;
-			case 'h':
-			default:
-				print_help();
-				exit(0);
-		}
-
-	for (int i = start_instance; i < 301; i++) {
-		if (do_all) {
-			gInstance = i;
-		}
-		ostringstream padded_filename;
-		if (gInstance == -1)
-			padded_filename << "./part-1-examples/example-01.desc";
-		else
-			padded_filename << "./part-1-initial/prob-" << setw(3)
-							<< setfill('0') << gInstance << ".desc";
-		mine_state mine(padded_filename.str());
-		mine_navigator nav(&mine);
-		cout << endl << "Instance " << gInstance << ", ";
-		global_graph_splitter splitter(&nav.graph);
-		splitter.target_nb_of_nodes_per_zone = 50;
-		vector<vector<Node>> final_sol = splitter.solve(population);
-		if (display) {
-			vector<vector<position>> solution =
-				nav.list_of_coords_from_nodes(final_sol);
-			renderer subrender;
-			subrender.set_mine(&mine);
-			subrender.set_zones(&solution);
-			subrender.mainLoop();
-		}
-
-		if (!do_all) {
-			return 0;
-		}
-	}
-
-	return 0;
 }
