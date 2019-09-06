@@ -19,13 +19,13 @@ typedef EA::GenerationType<MySolution, MyMiddleCost> Generation_Type;
 class genetic_graph_splitter {
     public:
         ListDigraph *graph;
-        mine_navigator *nav;
-        mine_state *mine;
         int nb_of_nodes;
         int nb_of_node_per_zone;
         int nb_of_zones;
         int instance;
-        genetic_graph_splitter(mine_navigator *in_nav);
+        vector<Node> node_list;
+
+        genetic_graph_splitter(ListDigraph *arg_graph);
         ~genetic_graph_splitter();
         vector<vector<Node>> solve(int population_size);
         vector<vector<Node>> partition_graph_with_split(const vector<pair<Node, int>> &loc_split, double *score);
@@ -43,6 +43,9 @@ class genetic_graph_splitter {
         void SO_report_generation(int generation_number,
                     const EA::GenerationType<MySolution, MyMiddleCost>& last_generation,
                     const MySolution& best_genes);
+        void SO_report_generation_empty(int generation_number,
+                    const EA::GenerationType<MySolution, MyMiddleCost>& last_generation,
+                    const MySolution& best_genes) {};
 };
 
 struct MySolution {
@@ -61,5 +64,15 @@ struct MyMiddleCost {
 	// This is where the results of simulation
 	// is stored but not yet finalized.
 	double objective1;
+};
+
+class global_graph_splitter {
+    public:
+    ListDigraph *graph;
+    int target_nb_of_nodes_per_zone;
+
+    global_graph_splitter(ListDigraph *arg_graph);
+    ~global_graph_splitter() {};
+    vector<vector<Node>> solve(int population_size);
 };
 #endif
