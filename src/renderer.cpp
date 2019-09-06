@@ -88,7 +88,9 @@ void renderer::draw() {
 		complex<double> booster_centered_pos(it->real() + 0.5, it->imag() + 0.5);
 		al_draw_filled_circle(TO_SCREEN(booster_centered_pos), 10 / SHAPE_SCALE, MANIP_COL);
 	}
-	int grey = 50;
+	int red = 50;
+	int blue = 50;
+	int green = 50;
 	if (zones) {
 		for (int i = 0; i < mine->max_size_x ; i++) {
 			for (int j = 0; j < mine->max_size_y; j++) {
@@ -105,9 +107,33 @@ void renderer::draw() {
 		}
 		for (auto zone:*zones) {
 			for (auto pixel:zone) {
-				al_draw_filled_rectangle(TO_SCREEN(pixel), TO_SCREEN(pixel + position(1,1)), al_map_rgba(grey, grey, grey, 255));
+				al_draw_filled_rectangle(TO_SCREEN(pixel), TO_SCREEN(pixel + position(1,1)), al_map_rgba(red, green, blue, 255));
 			}
-		grey += 50;
+			//al_draw_filled_rectangle(TO_SCREEN(zone[0]), TO_SCREEN(zone[0] + position(1,1)), al_map_rgba(0, 255, 0, 255));
+			complex<double> pos_of_sub_rectangle1 = complex<double>(zone[0].real(), zone[0].imag()) + complex<double>(0.2, 0.2);
+			complex<double> pos_of_sub_rectangle2 = pos_of_sub_rectangle1 + complex<double>(0.6, 0.6);
+			al_draw_filled_rectangle(TO_SCREEN(pos_of_sub_rectangle1), TO_SCREEN(pos_of_sub_rectangle2), al_map_rgba(255, 255, 255, 255));
+			//al_draw_filled_rectangle(TO_SCREEN(pos_of_sub_rectangle1 + complex<double>(0.2, 0.2)), TO_SCREEN(pos_of_sub_rectangle2 - complex<double>(0.2, 0.2)), al_map_rgba(255, 0, 0, 255));
+
+			if (blue != 0) {
+				blue += 50;
+				if (blue > 250)
+					blue = 0;
+			} else if (red != 0) {
+				red += 50;
+				if (red > 250)
+					red = 0;
+			} else if (green != 0) {
+				green += 50;
+				if (green > 250)
+					green = 0;
+			}
+			if (red == 0 && green == 0 && blue == 0) {
+				red = 25;
+				green = 25;
+				blue = 25;
+			}
+
 		}
 
 	}

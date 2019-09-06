@@ -1,4 +1,4 @@
-#include "solver.h"
+#include "genetic_splitter.h"
 #include <lemon/adaptors.h>
 #include <fstream>
 #include <iomanip>

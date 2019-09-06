@@ -7,7 +7,7 @@ link_directories(/usr/lib /usr/bin /usr/local/lib)
 add_definitions(-MD -MP -Wall -O3 -std=c++11 -Woverloaded-virtual -DNOSSL -fPIC)
 add_executable (viz_ww src/main.cpp src/mine.cpp src/renderer.cpp src/agent.cpp src/fileparser.cpp)
 add_executable (optimizer src/mine.cpp src/agent.cpp src/genetic_optimizer.cpp)
-add_executable (solver src/mine.cpp src/agent.cpp src/solver.cpp src/renderer.cpp)
+add_executable (solver src/mine.cpp src/agent.cpp src/genetic_splitter.cpp src/renderer.cpp)
 add_executable (fuq-solver1 fuqinho/main.cc)
 add_executable (fuq-solver2 fuqinho/main2.cc)
 
