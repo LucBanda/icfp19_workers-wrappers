@@ -32,13 +32,13 @@ class mine_navigator {
 	vector<Node> get_node_list();
 	vector<Node> get_bfs_from_node(Node start, int depth);
 	vector<vector<position>> list_of_coords_from_nodes(const vector<vector<Node>> list);
-	ListDigraph graph;
-	ListDigraph::NodeMap<position> coord_map;
-	ListDigraph::ArcMap<char> direction_map;
-	ListDigraph::ArcMap<enum orientation> orientation_map;
-	ListDigraph::ArcMap<int> length;
+	Graph graph;
+	Graph::NodeMap<position> coord_map;
+	Graph::ArcMap<char> direction_map;
+	Graph::ArcMap<enum orientation> orientation_map;
+	Graph::ArcMap<int> length;
 	Node initialNode;
-	ListDigraph::NodeMap<vector<Node>> ordered_node_map;
+	Graph::NodeMap<vector<Node>> ordered_node_map;
 };
 
 class mine_state {

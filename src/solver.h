@@ -18,14 +18,14 @@ typedef EA::GenerationType<MySolution, MyMiddleCost> Generation_Type;
 
 class genetic_graph_splitter {
     public:
-        ListDigraph *graph;
+        Graph *graph;
         int nb_of_nodes;
         int nb_of_node_per_zone;
         int nb_of_zones;
         int instance;
         vector<Node> node_list;
 
-        genetic_graph_splitter(ListDigraph *arg_graph);
+        genetic_graph_splitter(Graph *arg_graph);
         ~genetic_graph_splitter();
         vector<vector<Node>> solve(int population_size);
         vector<vector<Node>> partition_graph_with_split(const vector<pair<Node, int>> &loc_split, double *score);
@@ -68,10 +68,10 @@ struct MyMiddleCost {
 
 class global_graph_splitter {
     public:
-    ListDigraph *graph;
+    Graph *graph;
     int target_nb_of_nodes_per_zone;
 
-    global_graph_splitter(ListDigraph *arg_graph);
+    global_graph_splitter(Graph *arg_graph);
     ~global_graph_splitter() {};
     vector<vector<Node>> solve(int population_size);
 };

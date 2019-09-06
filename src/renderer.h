@@ -18,7 +18,7 @@ class renderer {
    private:
 	mine_state *mine;
 	mine_navigator *nav;
-	FilterNodes<ListDigraph> *subgraph;
+	FilterNodes<Graph> *subgraph;
 
 	void draw();
 
@@ -39,7 +39,7 @@ class renderer {
 	~renderer() {}
 	void mainLoop();
 	void set_mine(mine_state *arg_mine) {mine = arg_mine;}
-	void set_subgraph(mine_navigator *arg_nav, FilterNodes<ListDigraph> *arg_subgraph) {nav = arg_nav; subgraph = arg_subgraph;}
+	void set_subgraph(mine_navigator *arg_nav, FilterNodes<Graph> *arg_subgraph) {nav = arg_nav; subgraph = arg_subgraph;}
 	void set_zones(vector<vector<position>> *zone_list) {zones = zone_list;}
 };
 

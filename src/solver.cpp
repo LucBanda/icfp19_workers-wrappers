@@ -28,7 +28,7 @@ void genetic_graph_splitter::init_genes(
 
 vector<vector<Node>> genetic_graph_splitter::partition_graph_with_split(
 	const vector<pair<Node, int>>& loc_split, double* score) {
-	ListDigraph::NodeMap<bool> filter(*graph, true);
+	Graph::NodeMap<bool> filter(*graph, true);
 	vector<vector<Node>> result_total;
 
 	for (auto patch : loc_split) {
@@ -37,14 +37,14 @@ vector<vector<Node>> genetic_graph_splitter::partition_graph_with_split(
 		if (filter[node] == true) {
 			vector<Node> result;
 			result.clear();
-			FilterNodes<ListDigraph> subgraph(*graph, filter);
-			Bfs<FilterNodes<ListDigraph>> bfs(subgraph);
+			FilterNodes<Graph> subgraph(*graph, filter);
+			Bfs<lSubGraph> bfs(subgraph);
 			bfs.init();
 			bfs.addSource(node);
 			int cnt = 0;
 			// bfs.addSource(list_node[it]);
 			while (!bfs.emptyQueue() && depth > 0) {
-				FilterNodes<ListDigraph>::Node n = bfs.processNextNode();
+				FilterNodes<Graph>::Node n = bfs.processNextNode();
 				if (filter[n] == true) {
 					filter[n] = false;
 					result.push_back(n);
@@ -52,19 +52,12 @@ vector<vector<Node>> genetic_graph_splitter::partition_graph_with_split(
 					cnt++;
 				}
 			}
-			if (cnt > 0) {
-				vector<Node> result2;
-				for (auto res : result) {
-					result2.push_back(res);
-				}
-				result_total.push_back(result2);
-			}
-
+			result_total.push_back(result);
 			if (score) *score += abs(nb_of_node_per_zone - cnt);
 		}
 	}
 	if (score) {
-		for (ListDigraph::NodeIt n(*graph); n != INVALID; ++n) {
+		for (Graph::NodeIt n(*graph); n != INVALID; ++n) {
 			if (filter[n]) *score += nb_of_nodes;
 		}
 	}
@@ -136,10 +129,10 @@ void genetic_graph_splitter::SO_report_generation(
 		 << "Exe_time=" << last_generation.exe_time << endl;
 }
 
-genetic_graph_splitter::genetic_graph_splitter(ListDigraph* arg_graph) {
+genetic_graph_splitter::genetic_graph_splitter(Graph* arg_graph) {
 	graph = arg_graph;
 	nb_of_nodes = 0;
-	for (ListDigraph::NodeIt n(*graph); n != INVALID; ++n) {
+	for (NodeIt n(*graph); n != INVALID; ++n) {
 		nb_of_nodes++;
 		node_list.push_back(n);
 	}
@@ -148,8 +141,8 @@ genetic_graph_splitter::~genetic_graph_splitter() {}
 
 vector<vector<Node>>& genetic_graph_splitter::fix_solution(
 	vector<vector<Node>>& solution) {
-	ListDigraph::NodeMap<bool> filter(*graph, true);
-	ListDigraph::NodeMap<int> zoneMap(*graph);
+	Graph::NodeMap<bool> filter(*graph, true);
+	Graph::NodeMap<int> zoneMap(*graph);
 
 	for (int i = 0; i < solution.size(); i++) {
 		for (auto n : solution[i]) {
@@ -157,9 +150,9 @@ vector<vector<Node>>& genetic_graph_splitter::fix_solution(
 			zoneMap[n] = i;
 		}
 	}
-	FilterNodes<ListDigraph> subgraph(*graph, filter);
-	for (FilterNodes<ListDigraph>::NodeIt n(subgraph); n != INVALID; ++n) {
-		Bfs<ListDigraph> bfs(*graph);
+	lSubGraph subgraph(*graph, filter);
+	for (lSubGraph::NodeIt n(subgraph); n != INVALID; ++n) {
+		Bfs<Graph> bfs(*graph);
 
 		bfs.init();
 		bfs.addSource(n);
@@ -215,20 +208,20 @@ vector<vector<Node>> genetic_graph_splitter::solve(int population_size) {
 	return fix_solution(soluce);
 }
 
-global_graph_splitter::global_graph_splitter(ListDigraph* src_graph) {
+global_graph_splitter::global_graph_splitter(Graph* src_graph) {
 	graph = src_graph;
 }
 
 vector<vector<Node>> global_graph_splitter::solve(int population) {
 	EA::Chronometer timer;
-	vector<vector<ListDigraph::Node>> sol_nodes;
+	vector<vector<Node>> sol_nodes;
 	vector<Node> temp_res;
-	for (ListDigraph::NodeIt it(*graph); it != INVALID; ++it) {
+	for (NodeIt it(*graph); it != INVALID; ++it) {
 		temp_res.push_back(it);
 	}
 	sol_nodes.push_back(temp_res);
 	timer.tic();
-	vector<vector<ListDigraph::Node>> final_sol = sol_nodes;
+	vector<vector<Node>> final_sol = sol_nodes;
 	bool cont = true;
 	int divisor = 5;
 	while (cont) {
@@ -255,17 +248,16 @@ vector<vector<Node>> global_graph_splitter::solve(int population) {
 			something_done = true;
 			FilterNodes<Graph> subgraph(*graph, filtered);
 			// copy subgraph
-			ListDigraph temp_graph;
-			DigraphCopy<FilterNodes<ListDigraph>, ListDigraph> cp(subgraph,
-																  temp_graph);
-			ListDigraph::NodeMap<FilterNodes<ListDigraph>::Node> nr(temp_graph);
+			Graph temp_graph;
+			DigraphCopy<lSubGraph, Graph> cp(subgraph, temp_graph);
+			Graph::NodeMap<lSubGraph::Node> nr(temp_graph);
 			cp.nodeCrossRef(nr);
 			cp.run();
 			genetic_graph_splitter suboptimizer(&temp_graph);
 			suboptimizer.nb_of_zones = divisor;
-			vector<vector<ListDigraph::Node>> subsol_nodes =
+			vector<vector<Node>> subsol_nodes =
 				suboptimizer.solve(population);
-			vector<vector<ListDigraph::Node>> mapped_subsol_nodes;
+			vector<vector<Node>> mapped_subsol_nodes;
 			for (auto zone : subsol_nodes) {
 				vector<Node> temp_res;
 				for (auto node : zone) {
@@ -301,10 +293,6 @@ static void print_help() {
 		"	-p population: population of each generation (default 2000)\n"
 		"	-d : enable logging of chromosomes in a file\n");
 }
-
-/*static vector<vector<Node>> bipartite_until(const ListDigraph &graph, int
-until_size) { vector<vector<Node>> result; return result;
-}*/
 
 int main(int argc, char** argv) {
 	bool do_all = false;

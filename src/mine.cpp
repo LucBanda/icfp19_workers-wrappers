@@ -150,9 +150,9 @@ typedef dim2::Point<int> Point;
 
 mine_navigator::mine_navigator(mine_state *base_mine): coord_map(graph), direction_map(graph), orientation_map(graph), length(graph), ordered_node_map(graph)  {
 	int i,j;
-	ListDigraph::NodeMap<Point> coords(graph);
-	ListDigraph::NodeMap<double> sizes(graph);
-	ListDigraph::ArcMap<int> acolors(graph);
+	Graph::NodeMap<Point> coords(graph);
+	Graph::NodeMap<double> sizes(graph);
+	Graph::ArcMap<int> acolors(graph);
 	Palette palette;
  	Palette paletteW(true);
 	for (i = 0; i < base_mine->max_size_x; i++) {
@@ -223,7 +223,7 @@ void mine_navigator::init_ordered_map() {
 	vector<Node> list_node = get_node_list();
 
 	for (int it = 0; it < (int)list_node.size(); it++) {
-		Bfs<ListDigraph> dfs(graph);
+		Bfs<Graph> dfs(graph);
 		vector<Node> result;
 		dfs.init();
 		dfs.addSource(list_node[it]);
@@ -252,7 +252,7 @@ string mine_navigator::goto_node(enum orientation source_orientation,enum orient
 	Arc last_arc;
 
 	if (orig == target){
-		for (ListDigraph::InArcIt a(graph, orig); a != INVALID; ++a) {
+		for (Graph::InArcIt a(graph, orig); a != INVALID; ++a) {
 			char dir = direction_map[a];
 			result += dir;
 			if (dir == 'A') {
@@ -278,12 +278,12 @@ string mine_navigator::goto_node(enum orientation source_orientation,enum orient
 	} else {
 		//apply dijkstra to graph
 		std::vector<Arc> arcpath;
-		Dijkstra<ListDigraph> dijkstra(graph, length);
+		Dijkstra<Graph> dijkstra(graph, length);
 		dijkstra.run(target, orig);
 
 		//get back path
-		Dijkstra<ListDigraph>::Path path = dijkstra.path(orig);
-		for(Dijkstra<ListDigraph>::Path::RevArcIt it(path); it!=INVALID ; it.operator++() ) {
+		Dijkstra<Graph>::Path path = dijkstra.path(orig);
+		for(Dijkstra<Graph>::Path::RevArcIt it(path); it!=INVALID ; it.operator++() ) {
 			result += direction_map[it];
 			last_orientation = orientation_map[it];
 			*ending_node = graph.target(it);

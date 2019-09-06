@@ -19,7 +19,7 @@
 
 #define TO_SCREEN(c)  SCREEN_W * (real(c) + 1) / SCALE, SCREEN_H - SCREEN_H * (imag(c) + 1) / SCALE
 
-#define SHAPE_SCALE	2.
+#define SHAPE_SCALE	1.
 const int SCREEN_W = 2000. / SHAPE_SCALE;
 const int SCREEN_H = 2000. / SHAPE_SCALE;
 
@@ -58,7 +58,7 @@ void renderer::draw() {
 			}
 		}
 	} else {
-		for (FilterNodes<ListDigraph>::NodeIt it(*subgraph); it != INVALID; ++it) {
+		for (FilterNodes<Graph>::NodeIt it(*subgraph); it != INVALID; ++it) {
 				position to_screen_pos(TO_SCREEN(nav->coord_map[it]));
 				al_draw_filled_rectangle(TO_SCREEN(nav->coord_map[it]), TO_SCREEN(nav->coord_map[it] + position(1,1)), WHITE_COL);
 		}

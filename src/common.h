@@ -12,7 +12,7 @@
 #include <sstream>
 #include <vector>
 #include <complex>
-#include <lemon/list_graph.h>
+#include <lemon/smart_graph.h>
 #include <unistd.h>
 #include <lemon/adaptors.h>
 #include <lemon/maps.h>
@@ -21,12 +21,12 @@ using namespace std;
 using namespace lemon;
 
 typedef std::complex<double> Complex;
-typedef ListDigraph::Node Node;
-typedef ListDigraph::Arc Arc;
-typedef ListDigraph::NodeIt NodeIt;
-typedef ListDigraph::ArcIt ArcIt;
-typedef ListDigraph Graph;
-typedef FilterNodes<ListDigraph> lSubGraph;
+typedef SmartDigraph::Node Node;
+typedef SmartDigraph::Arc Arc;
+typedef SmartDigraph::NodeIt NodeIt;
+typedef SmartDigraph::ArcIt ArcIt;
+typedef SmartDigraph Graph;
+typedef FilterNodes<SmartDigraph> lSubGraph;
 
 
 #endif
