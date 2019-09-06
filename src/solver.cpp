@@ -200,7 +200,7 @@ vector<vector<Node>> genetic_graph_splitter::solve(int population_size) {
 	ga_obj.SO_report_generation = std::bind(
 		&genetic_graph_splitter::SO_report_generation_empty, this, _1, _2, _3);
 	ga_obj.crossover_fraction = 0.7;
-	ga_obj.mutation_rate = 0.6;
+	ga_obj.mutation_rate = 0.3;
 	ga_obj.best_stall_max = 30;
 	ga_obj.average_stall_max = 10;
 	ga_obj.elite_count = 10;
@@ -243,11 +243,11 @@ vector<vector<Node>> global_graph_splitter::solve(int population) {
 				divisor = 2;
 			} else if (patch.size() < 3 * target_nb_of_nodes_per_zone) {
 				divisor = 3;
-			} else if (patch.size() < 4 * target_nb_of_nodes_per_zone) {
+			} else //if (patch.size() < 4 * target_nb_of_nodes_per_zone) {
 				divisor = 4;
-			} else {
+			/*} else {
 				divisor = 5;
-			}
+			}*/
 			Graph::NodeMap<bool> filtered(*graph, false);
 			for (auto it : patch) {
 				filtered[it] = true;
@@ -348,7 +348,7 @@ int main(int argc, char** argv) {
 		mine_navigator nav(&mine);
 		cout << endl << "Instance " << gInstance << ", ";
 		global_graph_splitter splitter(&nav.graph);
-		splitter.target_nb_of_nodes_per_zone = 30;
+		splitter.target_nb_of_nodes_per_zone = 50;
 		vector<vector<Node>> final_sol = splitter.solve(population);
 		if (display) {
 			vector<vector<position>> solution =
