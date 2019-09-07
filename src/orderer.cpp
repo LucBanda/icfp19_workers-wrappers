@@ -83,11 +83,11 @@ int main(int argc, char** argv) {
         vector<vector<position>> solution;
         if (!load_file) {
             genetic_orderer orderer(nav, centered_nodes);
-            cout << "orderer generation = " << timer.toc() << " s" << endl;
+            cout << "instance "<< gInstance << ": orderer generation = " << timer.toc() << " s" << endl;
             timer.tic();
             vector<Node> ordered_zones = orderer.solve(population);
             vector<vector<Node>> ordered_solution;
-            cout << "found solution = " << timer.toc() << " s" << endl;
+            cout << "instance "<< gInstance << ": found solution = " << timer.toc() << " s" << endl;
             for (auto zoneordre:ordered_zones) {
                 for (auto zone:previous_solution) {
                     if (zone[0] == zoneordre)
@@ -112,12 +112,6 @@ int main(int argc, char** argv) {
 
         output_file.flush();
         output_file.close();
-
-        renderer render;
-        render.set_mine(&mine);
-        render.instance = gInstance;
-        render.set_zones(&solution);
-        render.mainLoop();
 
 		if (!do_all) {
 			return 0;

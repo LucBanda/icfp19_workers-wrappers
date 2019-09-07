@@ -69,7 +69,7 @@ int main(int argc, char** argv) {
 		}
 
 		//agent* ag;
-		render = new renderer();
+		render = new renderer(instance);
 		ostringstream padded_filename;
 		if (instance == -1) padded_filename << "./part-1-examples/example-01.desc";
 		 else padded_filename << "./part-1-initial/prob-"<< setw(3) << setfill('0') << instance << ".desc";

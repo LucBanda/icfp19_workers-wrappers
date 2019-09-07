@@ -4,6 +4,7 @@
 #include <allegro5/allegro_primitives.h>
 #include "renderer.h"
 #include "mine.h"
+#include "fileparser.h"
 
 #define MAP_RES 3000
 
@@ -26,16 +27,20 @@ const int SCREEN_H = 2000. / SHAPE_SCALE;
 
 using namespace std;
 
-renderer::renderer() {
+renderer::renderer(int arg_instance) {
 	SCALE = 1;
 	draw_decimation = 1;
 	FPS = 50;
 	scale_edited = false;
 	step_it = false;
 	run_under_step = false;
-	zones = NULL;
 	idle_param = NULL;
 	nav = NULL;
+	mode = NAVIGATE;
+	display_text = false;
+	instance = arg_instance;
+	zones = parse_split("./results/split-"+to_string(instance)+".txt");
+	ordered_zones = parse_split("./results/order-"+to_string(instance)+".txt");
 }
 
 double start_radius = 0;
@@ -91,7 +96,7 @@ void renderer::draw() {
 	int red = 50;
 	int blue = 50;
 	int green = 50;
-	if (zones) {
+	if (mode == ZONES || mode == ORDERED_ZONES) {
 		for (int i = 0; i < mine->max_size_x ; i++) {
 			for (int j = 0; j < mine->max_size_y; j++) {
 				position to_screen_pos(TO_SCREEN(position(i,j)));
@@ -106,7 +111,7 @@ void renderer::draw() {
 			}
 		}
 
-		for (auto zone:*zones) {
+		for (auto zone:(mode == ZONES ? zones:ordered_zones)) {
 			for (auto pixel:zone) {
 				al_draw_filled_rectangle(TO_SCREEN(pixel), TO_SCREEN(pixel + position(1,1)), al_map_rgba(red, green, blue, 255));
 			}
@@ -134,14 +139,15 @@ void renderer::draw() {
 			}
 
 		}
-		int i = 0;
-		for (auto zone:*zones) {
-			complex<double> pos_of_center = complex<double>(zone[0].real(), zone[0].imag()) + complex<double>(0.5, 0.5);
+		if (display_text) {
+			int i = 0;
+			for (auto zone:(mode == ZONES ? zones:ordered_zones)) {
+				complex<double> pos_of_center = complex<double>(zone[0].real(), zone[0].imag()) + complex<double>(0.5, 0.5);
 
-			al_draw_text(debug_font, al_map_rgb(255,255,255), TO_SCREEN(pos_of_center), ALLEGRO_ALIGN_CENTER, to_string(i).c_str());
-			i++;
+				al_draw_text(debug_font, al_map_rgb(255,255,255), TO_SCREEN(pos_of_center), ALLEGRO_ALIGN_CENTER, to_string(i).c_str());
+				i++;
+			}
 		}
-
 	}
 }
 
@@ -202,7 +208,6 @@ void renderer::mainLoop() {
 	al_clear_to_color(al_map_rgb(0, 0, 0));
 	al_flip_display();
 	al_start_timer(timer);
-
 	while (!doexit) {
 		ALLEGRO_EVENT ev;
 		al_wait_for_event(event_queue, &ev);
@@ -270,9 +275,18 @@ void renderer::mainLoop() {
 					break;
 
 				case ALLEGRO_KEY_R:
+				    mode = ZONES;
 					key[KEY_R] = false;
 					break;
-
+				case ALLEGRO_KEY_T:
+					display_text = !display_text;
+					break;
+				case ALLEGRO_KEY_O:
+				    mode = ORDERED_ZONES;
+					break;
+				case ALLEGRO_KEY_U:
+					mode = NAVIGATE;
+					break;
 				case ALLEGRO_KEY_ESCAPE:
 					doexit = true;
 					break;

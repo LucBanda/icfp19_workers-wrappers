@@ -27,16 +27,6 @@ static void print_help() {
 		"	-s size: targeted size of each area\n");
 }
 
-static void display_result(int instance, string inputfilename) {
-    mine_state mine(inputfilename);
-    vector<vector<position>> solution = parse_split("./results/split-"+to_string(instance)+".txt");
-    renderer render;
-    render.set_mine(&mine);
-    render.instance = instance;
-    render.set_zones(&solution);
-    render.mainLoop();
-}
-
 int main(int argc, char** argv) {
 	bool do_all = false;
 	int start_instance = 0;
@@ -84,12 +74,6 @@ int main(int argc, char** argv) {
 			padded_filename << "./part-1-initial/prob-" << setw(3)
 							<< setfill('0') << gInstance << ".desc";
 
-        if (load_file) {
-            display_result(gInstance, padded_filename.str());
-            if (do_all)
-                continue;
-            else return 0;
-        }
 		mine_state mine(padded_filename.str());
 		mine_navigator nav(&mine);
 		cout << endl << "Instance " << gInstance << ", ";
@@ -111,9 +95,6 @@ int main(int argc, char** argv) {
 
         output_file.flush();
         output_file.close();
-		if (display) {
-			display_result(gInstance, padded_filename.str());
-		}
 
 		if (!do_all) {
 			return 0;
