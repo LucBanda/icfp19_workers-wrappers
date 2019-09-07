@@ -10,6 +10,7 @@
 #include "openga.hpp"
 #include "renderer.h"
 #include "sys/time.h"
+#include "fileparser.h"
 
 
 static void print_help() {
@@ -23,7 +24,17 @@ static void print_help() {
 		"	-f factor: divider of fuel max to limit thrust range (default is "
 		"2)\n"
 		"	-p population: population of each generation (default 2000)\n"
-		"	-d : enable logging of chromosomes in a file\n");
+		"	-s size: targeted size of each area\n");
+}
+
+static void display_result(int instance, string inputfilename) {
+    mine_state mine(inputfilename);
+    vector<vector<position>> solution = parse_split("./results/split-"+to_string(instance)+".txt");
+    renderer render;
+    render.set_mine(&mine);
+    render.instance = instance;
+    render.set_zones(&solution);
+    render.mainLoop();
 }
 
 int main(int argc, char** argv) {
@@ -33,8 +44,10 @@ int main(int argc, char** argv) {
 	int population = 2000;
 	int gInstance = 0;
 	bool display = false;
+    bool load_file = false;
+	int region_size = 50;
 
-	while ((c = getopt(argc, argv, "dp:a:hi:")) != -1) switch (c) {
+	while ((c = getopt(argc, argv, "dp:a:hi:ls:")) != -1) switch (c) {
 			case 'i':
 				gInstance = atoi(optarg);
 				break;
@@ -47,6 +60,12 @@ int main(int argc, char** argv) {
 				break;
 			case 'p':
 				population = atoi(optarg);
+				break;
+            case 'l':
+                load_file = true;
+                break;
+			case 's':
+				region_size = atoi(optarg);
 				break;
 			case 'h':
 			default:
@@ -64,19 +83,36 @@ int main(int argc, char** argv) {
 		else
 			padded_filename << "./part-1-initial/prob-" << setw(3)
 							<< setfill('0') << gInstance << ".desc";
+
+        if (load_file) {
+            display_result(gInstance, padded_filename.str());
+            if (do_all)
+                continue;
+            else return 0;
+        }
 		mine_state mine(padded_filename.str());
 		mine_navigator nav(&mine);
 		cout << endl << "Instance " << gInstance << ", ";
 		global_graph_splitter splitter(&nav.graph);
-		splitter.target_nb_of_nodes_per_zone = 50;
+		splitter.target_nb_of_nodes_per_zone = region_size;
 		vector<vector<Node>> final_sol = splitter.solve(population);
-		if (display) {
-			vector<vector<position>> solution =
+        std::ofstream output_file;
+        output_file.open("./results/split-"+to_string(gInstance) + ".txt",
+                        std::ofstream::trunc);
+
+		vector<vector<position>> solution =
 				nav.list_of_coords_from_nodes(final_sol);
-			renderer subrender;
-			subrender.set_mine(&mine);
-			subrender.set_zones(&solution);
-			subrender.mainLoop();
+
+        for (auto zone:solution) {
+            for (auto point:zone)
+                output_file << "("<< point.real() << "," << point.imag() << ")/";
+            output_file << endl;
+        }
+
+        output_file.flush();
+        output_file.close();
+		if (display) {
+			display_result(gInstance, padded_filename.str());
 		}
 
 		if (!do_all) {

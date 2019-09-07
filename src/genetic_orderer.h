@@ -6,18 +6,18 @@
 #include <string>
 #include "agent.h"
 #include "openga.hpp"
-#
+
 #define MAX_NUMBER_OF_THRUSTS 5
 
 class genetic_orderer {
 
 struct MySolution {
-	vector<Node> split;
+	vector<SmartGraph::Node> split;
 
 	string to_string(genetic_orderer * optim) const {
         ostringstream res;
         for (auto it:split) {
-            res << optim->graph->id(it) << " / ";
+            res << optim->graph.id(it) << " / ";
         }
         return res.str();
 	}
@@ -33,10 +33,16 @@ typedef EA::Genetic<MySolution, MyMiddleCost> GA_Type;
 typedef EA::GenerationType<MySolution, MyMiddleCost> Generation_Type;
 
     public:
-        Graph *graph;
+        SmartGraph graph;
+        mine_navigator &nav;
         vector<Node> zone_centers;
+        SmartGraph::NodeMap<Node> submine_to_mine_nodes;
+        SmartGraph::EdgeMap<int> cost;
+        vector<SmartGraph::Node> node_list;
+        Node start_zone;
+        SmartGraph::Node starting_node;
 
-        genetic_orderer(Graph *arg_graph, vector<Node> &arg_zone_centers);
+        genetic_orderer(mine_navigator &arg_nav, vector<Node> &arg_zone_centers);
         ~genetic_orderer();
         vector<Node> solve(int population_size);
 

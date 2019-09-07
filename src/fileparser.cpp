@@ -29,3 +29,26 @@ string parse_result(string fileName) {
 		std::cout << "Unable to open file.\n";
 	return "";
 }
+
+vector<vector<position>> parse_split(string filename) {
+	vector<vector<position>> result;
+	std::ifstream file(filename);
+    if (!file.good()) return result;
+	if (file) {
+		string line;
+		while (getline(file, line)) {
+			std::istringstream iss(line);
+			position pos;
+			vector<position> lineresult;
+			int x, y;
+			char p1,v,p2,slash;
+			while (iss >> p1 >> x >> v >> y >>p2 >> slash) {
+				pos = position(x,y);
+				lineresult.push_back(pos);
+			}
+			result.push_back(lineresult);
+			// process pair (a,b)
+		}
+	}
+	return result;
+}

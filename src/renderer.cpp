@@ -105,6 +105,7 @@ void renderer::draw() {
 
 			}
 		}
+
 		for (auto zone:*zones) {
 			for (auto pixel:zone) {
 				al_draw_filled_rectangle(TO_SCREEN(pixel), TO_SCREEN(pixel + position(1,1)), al_map_rgba(red, green, blue, 255));
@@ -113,19 +114,17 @@ void renderer::draw() {
 			complex<double> pos_of_sub_rectangle1 = complex<double>(zone[0].real(), zone[0].imag()) + complex<double>(0.2, 0.2);
 			complex<double> pos_of_sub_rectangle2 = pos_of_sub_rectangle1 + complex<double>(0.6, 0.6);
 			al_draw_filled_rectangle(TO_SCREEN(pos_of_sub_rectangle1), TO_SCREEN(pos_of_sub_rectangle2), al_map_rgba(255, 255, 255, 255));
-			//al_draw_filled_rectangle(TO_SCREEN(pos_of_sub_rectangle1 + complex<double>(0.2, 0.2)), TO_SCREEN(pos_of_sub_rectangle2 - complex<double>(0.2, 0.2)), al_map_rgba(255, 0, 0, 255));
-
 			if (blue != 0) {
-				blue += 50;
-				if (blue > 250)
+				blue += 10;
+				if (blue > 235)
 					blue = 0;
 			} else if (red != 0) {
-				red += 50;
-				if (red > 250)
+				red += 10;
+				if (red > 235)
 					red = 0;
 			} else if (green != 0) {
-				green += 50;
-				if (green > 250)
+				green += 10;
+				if (green > 235)
 					green = 0;
 			}
 			if (red == 0 && green == 0 && blue == 0) {
@@ -134,6 +133,13 @@ void renderer::draw() {
 				blue = 25;
 			}
 
+		}
+		int i = 0;
+		for (auto zone:*zones) {
+			complex<double> pos_of_center = complex<double>(zone[0].real(), zone[0].imag()) + complex<double>(0.5, 0.5);
+
+			al_draw_text(debug_font, al_map_rgb(255,255,255), TO_SCREEN(pos_of_center), ALLEGRO_ALIGN_CENTER, to_string(i).c_str());
+			i++;
 		}
 
 	}
@@ -166,7 +172,9 @@ void renderer::mainLoop() {
    al_init_font_addon(); // initialize the font addon
    al_init_ttf_addon();// initialize the ttf (True Type Font) addon
 
-   debug_font = al_load_ttf_font("AllegroBT-Regular.otf",72 / SHAPE_SCALE,0 );
+   debug_font = al_load_ttf_font("./src/AllegroBT-Regular.otf",50 / SHAPE_SCALE,0 );
+
+	al_set_new_window_title(to_string(instance).c_str());
 
 	al_set_new_display_flags(ALLEGRO_WINDOWED | ALLEGRO_RESIZABLE);
 	display = al_create_display(SCREEN_W, SCREEN_H);

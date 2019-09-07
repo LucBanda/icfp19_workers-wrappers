@@ -11,6 +11,7 @@
 #include "renderer.h"
 #include "sys/time.h"
 #include "genetic_splitter.h"
+#include "fileparser.h"
 
 static void print_help() {
 	printf(
@@ -31,10 +32,11 @@ int main(int argc, char** argv) {
 	int start_instance = 0;
 	int c;
 	int population = 2000;
-	int gInstance = 0;
+	int gInstance = 6;
 	bool display = false;
+    bool load_file = false;
 
-	while ((c = getopt(argc, argv, "dp:a:hi:")) != -1) switch (c) {
+	while ((c = getopt(argc, argv, "dp:a:hi:l")) != -1) switch (c) {
 			case 'i':
 				gInstance = atoi(optarg);
 				break;
@@ -48,12 +50,16 @@ int main(int argc, char** argv) {
 			case 'p':
 				population = atoi(optarg);
 				break;
+            case 'l':
+                load_file = true;
+                break;
 			case 'h':
 			default:
 				print_help();
-				exit(0);
+				//exit(0);
 		}
-
+	EA::Chronometer timer;
+    timer.tic();
 	for (int i = start_instance; i < 301; i++) {
 		if (do_all) {
 			gInstance = i;
@@ -66,20 +72,52 @@ int main(int argc, char** argv) {
 							<< setfill('0') << gInstance << ".desc";
 		mine_state mine(padded_filename.str());
 		mine_navigator nav(&mine);
-		cout << endl << "Instance " << gInstance << ", ";
-		global_graph_splitter splitter(&nav.graph);
-		splitter.target_nb_of_nodes_per_zone = 50;
-		vector<vector<Node>> final_sol = splitter.solve(population);
+        vector<vector<position>> solution_pos = parse_split("./results/split-" + to_string(gInstance) + ".txt");
+        vector<vector<Node>> previous_solution = nav.node_from_coords(solution_pos);
 
-        //genetic_orderer(&nav.graph, );
-		if (display) {
-			vector<vector<position>> solution =
-				nav.list_of_coords_from_nodes(final_sol);
-			renderer subrender;
-			subrender.set_mine(&mine);
-			subrender.set_zones(&solution);
-			subrender.mainLoop();
-		}
+        vector<Node> centered_nodes;
+        for (auto zone:previous_solution) {
+            centered_nodes.push_back(zone[0]);
+        }
+        timer.tic();
+        vector<vector<position>> solution;
+        if (!load_file) {
+            genetic_orderer orderer(nav, centered_nodes);
+            cout << "orderer generation = " << timer.toc() << " s" << endl;
+            timer.tic();
+            vector<Node> ordered_zones = orderer.solve(population);
+            vector<vector<Node>> ordered_solution;
+            cout << "found solution = " << timer.toc() << " s" << endl;
+            for (auto zoneordre:ordered_zones) {
+                for (auto zone:previous_solution) {
+                    if (zone[0] == zoneordre)
+                        ordered_solution.push_back(zone);
+                }
+            }
+            solution =
+				nav.list_of_coords_from_nodes(ordered_solution);
+        } else {
+            solution = parse_split("./results/split-" + to_string(gInstance) + ".txt");
+        }
+
+        std::ofstream output_file;
+        output_file.open("./results/order-"+to_string(gInstance) + ".txt",
+                        std::ofstream::trunc);
+
+        for (auto zone:solution) {
+            for (auto point:zone)
+                output_file << "("<< point.real() << "," << point.imag() << ")/";
+            output_file << endl;
+        }
+
+        output_file.flush();
+        output_file.close();
+
+        renderer render;
+        render.set_mine(&mine);
+        render.instance = gInstance;
+        render.set_zones(&solution);
+        render.mainLoop();
 
 		if (!do_all) {
 			return 0;

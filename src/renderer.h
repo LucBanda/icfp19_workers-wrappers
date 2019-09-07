@@ -34,6 +34,7 @@ class renderer {
    public:
 	std::function<bool(void *)> idle;
 	void *idle_param;
+	int instance;
 
 	renderer();
 	~renderer() {}

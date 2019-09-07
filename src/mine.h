@@ -32,6 +32,7 @@ class mine_navigator {
 	vector<Node> get_node_list();
 	vector<Node> get_bfs_from_node(Node start, int depth);
 	vector<vector<position>> list_of_coords_from_nodes(const vector<vector<Node>> list);
+	vector<vector<Node>> node_from_coords(vector<vector<position>> pos_list);
 	Graph graph;
 	Graph::NodeMap<position> coord_map;
 	Graph::ArcMap<char> direction_map;
@@ -39,6 +40,9 @@ class mine_navigator {
 	Graph::ArcMap<int> length;
 	Node initialNode;
 	Graph::NodeMap<vector<Node>> ordered_node_map;
+	std::map<int, Node> coord_to_node_map;
+	int max_size_x;
+	Node robot_pos;
 };
 
 class mine_state {

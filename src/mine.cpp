@@ -148,13 +148,23 @@ vector<position> mine_state::absolute_manipulators() {
 
 typedef dim2::Point<int> Point;
 
+vector<vector<Node>> mine_navigator::node_from_coords(vector<vector<position>> pos_list) {
+	vector<vector<Node>> result;
+
+	for (auto zone:pos_list) {
+		vector<Node> result_line;
+		for (auto node:zone) {
+			result_line.push_back(coord_to_node_map[node.imag() * max_size_x + node.real()]);
+			//cout << graph.id(coord_to_node_map[node.real() * max_size_x + node.imag()]) << " ";
+		}
+		//cout << endl;
+		result.push_back(result_line);
+	}
+	return result;
+}
 mine_navigator::mine_navigator(mine_state *base_mine): coord_map(graph), direction_map(graph), orientation_map(graph), length(graph), ordered_node_map(graph)  {
 	int i,j;
-	Graph::NodeMap<Point> coords(graph);
-	Graph::NodeMap<double> sizes(graph);
-	Graph::ArcMap<int> acolors(graph);
-	Palette palette;
- 	Palette paletteW(true);
+	max_size_x = base_mine->max_size_x;
 	for (i = 0; i < base_mine->max_size_x; i++) {
 		for (j = 0; j < base_mine->max_size_y; j++) {
 			if (!base_mine->board_tile_is_wall(position(i,j))) {
@@ -164,8 +174,10 @@ mine_navigator::mine_navigator(mine_state *base_mine): coord_map(graph), directi
 				if (currentpos == base_mine->robot) {
 					initialNode = u;
 				}
-				coords[u] = Point(i,j);
-				sizes[u] = .3;
+				coord_to_node_map[base_mine->max_size_x * j + i] = u;
+				if (currentpos == base_mine->robot) {
+					robot_pos = u;
+				}
 			}
 		}
 	}
@@ -177,25 +189,21 @@ mine_navigator::mine_navigator(mine_state *base_mine): coord_map(graph), directi
 				direction_map[e] = 'D';
 				orientation_map[e] = EAST;
 				length[e] = 1;
-				acolors[e] = 0;
 			} else if (coord_map[n] == position(coord_map[v].real()  - 1, coord_map[v].imag())) {
 				Arc e = graph.addArc(n,v);
 				direction_map[e] = 'A';
 				orientation_map[e] = WEST;
 				length[e] = 1;
-				acolors[e] = 1;
 			} else if (coord_map[n] == position(coord_map[v].real(), coord_map[v].imag() - 1)) {
 				Arc e = graph.addArc(n,v);
 				direction_map[e] = 'S';
 				orientation_map[e] = SOUTH;
 				length[e] = 1;
-				acolors[e] = 2;
 			} else if (coord_map[n] == position(coord_map[v].real(), coord_map[v].imag() + 1)) {
 				Arc e = graph.addArc(n,v);
 				direction_map[e] = 'W';
 				orientation_map[e] = NORTH;
 				length[e] = 1;
-				acolors[e] = 3;
 			}
 		}
 	}
@@ -203,13 +211,19 @@ mine_navigator::mine_navigator(mine_state *base_mine): coord_map(graph), directi
 
 vector<vector<position>> mine_navigator::list_of_coords_from_nodes(const vector<vector<Node>> liste) {
 	vector<vector<position>> result;
+	/*std::ofstream output_file;
+	 output_file.open("./results/ordered_nodes_coord_from_nodes-"+to_string(3) + ".txt",
+                        std::ofstream::trunc);*/
 	for (auto zone:liste) {
 		vector<position> interm_result;
 		for (auto n:zone) {
 			interm_result.push_back(coord_map[n]);
+			//output_file << coord_map[n] << " ";
 		}
+		//output_file << endl;
 		result.push_back(interm_result);
 	}
+	//output_file.close();
 	return result;
 }
 vector<Node> mine_navigator::get_node_list() {
@@ -228,7 +242,6 @@ void mine_navigator::init_ordered_map() {
 		dfs.init();
 		dfs.addSource(list_node[it]);
 		int depth = 3000;
-		//bfs.addSource(list_node[it]);
 		while (!dfs.emptyQueue() && depth--) {
 			Node v = dfs.processNextNode();
 			if (find(result.begin(), result.end(), v) == result.end())
