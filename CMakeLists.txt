@@ -6,11 +6,12 @@ link_directories(/usr/lib /usr/bin /usr/local/lib)
 
 add_definitions(-MD -MP -Wall -O3 -std=c++11 -Woverloaded-virtual -DNOSSL -fPIC)
 add_executable (viz_ww src/main.cpp src/mine.cpp src/renderer.cpp src/agent.cpp src/fileparser.cpp)
-add_executable (optimizer src/mine.cpp src/agent.cpp src/genetic_optimizer.cpp)
+add_executable (optimizer src/mine.cpp src/agent.cpp src/genetic_optimizer.cpp src/fileparser.cpp)
 add_executable (partitionner  src/fileparser.cpp src/partitionner.cpp src/mine.cpp src/agent.cpp src/genetic_splitter.cpp src/renderer.cpp)
 add_executable (fuq-solver1 fuqinho/main.cc)
 add_executable (fuq-solver2 fuqinho/main2.cc)
 add_executable (orderer src/orderer.cpp src/genetic_orderer.cpp src/genetic_splitter.cpp src/mine.cpp src/renderer.cpp src/fileparser.cpp)
+#add_executable (solver src/solver.cpp src/mine.cpp src/fileparser.cpp)
 
 target_link_libraries(orderer libemon.a allegro allegro_primitives allegro_main allegro_font allegro_ttf)
 target_link_libraries(partitionner libemon.a allegro allegro_primitives allegro_main allegro_font allegro_ttf)

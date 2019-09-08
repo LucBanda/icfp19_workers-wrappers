@@ -920,8 +920,6 @@ vector<RobotOrder> computeRobotOrders(const State& state, const vector<RobotOrde
     REP(k, R) {
         if (robot_orders[k].mode != 'W')
             continue;
-        int sx = state.robots[k].x;
-        int sy = state.robots[k].y;
 
         // debug
         robot_orders[k].mode = 'P';
@@ -940,7 +938,7 @@ vector<RobotOrder> updateAfterMoves(const State& state,
     vector<RobotOrder> robot_orders(prev_robot_orders);
     int H = (int)state.map.size();
     int W = (int)state.map[0].size();
-    int R = (int)state.robots.size();
+
     REP(k, robot_orders.size()) {
         if (robot_orders[k].mode == 'C' && moves[k].move_type == 'C') {
             robot_orders[k].mode = 'W';
@@ -975,8 +973,8 @@ vector<RobotOrder> updateAfterMoves(const State& state,
                 }
             }
         } else if (robot_orders[k].mode == 'G') {
-            int dx = abs(state.robots[k].x == get<0>(robot_orders[k].target_path.back()));
-            int dy = abs(state.robots[k].y == get<1>(robot_orders[k].target_path.back()));
+            int dx = abs(state.robots[k].x) == get<0>(robot_orders[k].target_path.back());
+            int dy = abs(state.robots[k].y) == get<1>(robot_orders[k].target_path.back());
             if (dx + dy <= 1) {
                 robot_orders[k].mode = 'W';
                 robot_orders[k].target_path.clear();
@@ -987,8 +985,6 @@ vector<RobotOrder> updateAfterMoves(const State& state,
 }
 
 vector<vector<Move>> computeBestMoves(const State& state, const vector<RobotOrder>& robot_orders) {
-    int H = (int)state.map.size();
-    int W = (int)state.map[0].size();
     int R = (int)state.robots.size();
 
     vector<vector<Move>> robot_moves(R);
@@ -1007,7 +1003,7 @@ vector<vector<Move>> computeBestMoves(const State& state, const vector<RobotOrde
                         break;
                     }
                 }
-                char direction;
+                char direction = 'E';
                 REP(i, 4) {
                     int nx = state.robots[k].x + DX[i];
                     int ny = state.robots[k].y + DY[i];

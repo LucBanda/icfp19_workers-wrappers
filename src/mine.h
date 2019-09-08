@@ -27,12 +27,16 @@ class mine_navigator {
 	~mine_navigator() {};
 	void init_graph();
 	void init_ordered_map();
-	string goto_node(enum orientation source_orientation, enum orientation &last_orientation, Node orig, Node target, Node *ending_node);
+	string goto_node(Node orig, Node target);
 	//string orientcorrectly(enum orientation source_orientation, enum orientation target_orientation);
+	mine_state *mine;
+
 	vector<Node> get_node_list();
 	vector<Node> get_bfs_from_node(Node start, int depth);
 	vector<vector<position>> list_of_coords_from_nodes(const vector<vector<Node>> list);
 	vector<vector<Node>> node_from_coords(vector<vector<position>> pos_list);
+	string get_orientation(orientation source, orientation target);
+
 	Graph graph;
 	Graph::NodeMap<position> coord_map;
 	Graph::ArcMap<char> direction_map;
@@ -59,6 +63,7 @@ class mine_state {
 	string strip(string commands);
 	bool board_tile_is_painted(position tile);
 	bool board_tile_is_wall(position tile);
+	bool board_tile_has_booster(position tile);
 	vector<position> absolute_manipulators();
 
 	int non_validated_tiles;

@@ -6,7 +6,7 @@
 #include <string>
 #include "agent.h"
 #include "openga.hpp"
-#
+
 #define MAX_NUMBER_OF_THRUSTS 5
 
 class genetic_optimizer;
@@ -20,12 +20,15 @@ class genetic_optimizer {
     public:
         int instance;
         string filename;
-		mine_state *base_mine;
+		mine_state base_mine;
         mine_navigator *navigator;
+        vector<vector<Node>> zones;
+        int zone_id;
+        Node start;
 
-        genetic_optimizer(int instance);
+        genetic_optimizer(int arg_instance, mine_navigator *arg_nav, vector<vector<position>> &arg_zones, int arg_zone_id, Node start_node, string start_string);
         ~genetic_optimizer();
-        bool solve(int population_size);
+        pair<string, Node> solve(int population_size);
 
     private:
         bool eval_solution(const MySolution& p, MyMiddleCost& c);
@@ -42,12 +45,15 @@ class genetic_optimizer {
 };
 
 struct MySolution {
-	vector<Node> node_list;
+	vector<pair<Node, orientation>> node_list;
 
-	string to_string(genetic_optimizer * optim) const {
-        mine_state mine(optim->base_mine);
-        agent ag(&mine, optim->navigator);
-        return ag.execution_map_from_node_list(node_list);
+	pair<string, Node> to_string(genetic_optimizer * optim) const {
+        mine_state mine(&optim->base_mine);
+        Node start = optim->start;
+        agent ag(&mine, optim->navigator, start);
+        Node last_node;
+        string res_string = ag.execution_map_from_node_list(node_list);
+        return make_pair(res_string, ag.last_node);
 	}
 };
 

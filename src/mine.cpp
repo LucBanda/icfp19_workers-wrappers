@@ -104,14 +104,20 @@ mine_state::mine_state(mine_state *base_mine) {
 	owned_manipulators_boosters = 0;
 	time_step = 0;
 	distance_loss = 0;
-	current_orientation = EAST;
+	current_orientation = base_mine->current_orientation;
 	board = (enum map_tile **) calloc(max_size_x, sizeof(enum map_tile *));
 	for (int i = 0; i < max_size_x; i++) {
 		board[i] = (enum map_tile *) calloc(max_size_y, sizeof(enum map_tile));
 		memcpy(board[i], base_mine->board[i], max_size_y * sizeof(enum map_tile));
 	}
-	/*digraphCopy(base_mine->graph, graph).nodeMap(base_mine->coord_map, coord_map).arcMap(base_mine->length, length).arcMap(base_mine->direction_map, direction_map).arcMap(base_mine->orientation_map, orientation_map).run();
-	initialNode = base_mine->initialNode;*/
+}
+
+bool mine_state::board_tile_has_booster(position tile) {
+	bool has_manip = find(manipulators_boosters.begin(), manipulators_boosters.end(), tile) != manipulators_boosters.end();
+	//bool has_drill = find(drill_boosters.begin(), drill_boosters.end(), tile) != drill_boosters.end();
+	//bool has_fast = find(fastwheels_boosters.begin(), fastwheels_boosters.end(), tile) != fastwheels_boosters.end();
+	//bool has_mystere = find(mystere_boosters.begin(), mystere_boosters.end(), tile) != mystere_boosters.end();
+	return has_manip;
 }
 
 bool mine_state::board_tile_is_painted(position tile) {
@@ -164,6 +170,8 @@ vector<vector<Node>> mine_navigator::node_from_coords(vector<vector<position>> p
 }
 mine_navigator::mine_navigator(mine_state *base_mine): coord_map(graph), direction_map(graph), orientation_map(graph), length(graph), ordered_node_map(graph)  {
 	int i,j;
+	mine = base_mine;
+
 	max_size_x = base_mine->max_size_x;
 	for (i = 0; i < base_mine->max_size_x; i++) {
 		for (j = 0; j < base_mine->max_size_y; j++) {
@@ -259,74 +267,39 @@ vector<Node> mine_navigator::get_bfs_from_node(Node start, int depth) {
 	return result;
 }
 
-string mine_navigator::goto_node(enum orientation source_orientation,enum orientation &last_orientation, Node orig, Node target, Node *ending_node) {
+string mine_navigator::get_orientation(orientation source, orientation target) {
+	string result;
+	if (source == (orientation)(target + 2)) {
+			result += "QQ";
+	} else if (source == (orientation)(target + 1)) {
+			result += "Q";
+	} else if ((orientation)(source + 1) == target) {
+			result += "E";
+	}
+	return result;
+}
+string mine_navigator::goto_node(Node orig, Node target) {
 	string result;
 	string last_car = "";
 	Arc last_arc;
 
 	if (orig == target){
-		for (Graph::InArcIt a(graph, orig); a != INVALID; ++a) {
-			char dir = direction_map[a];
-			result += dir;
-			if (dir == 'A') {
-				last_car = "D";
-				last_orientation = EAST;
-			}
-			else if (dir == 'D') {
-				last_car = "A";
-				last_orientation = WEST;
-			}
-			else if (dir == 'W') {
-				last_car = "S";
-				last_orientation = SOUTH;
-			}
-			else if (dir == 'S') {
-				last_car = "W";
-				last_orientation = NORTH;
-			}
-			*ending_node = graph.source(a);
-			break;
-		}
-
-	} else {
-		//apply dijkstra to graph
-		std::vector<Arc> arcpath;
-		Dijkstra<Graph> dijkstra(graph, length);
-		dijkstra.run(target, orig);
-
-		//get back path
-		Dijkstra<Graph>::Path path = dijkstra.path(orig);
-		for(Dijkstra<Graph>::Path::RevArcIt it(path); it!=INVALID ; it.operator++() ) {
-			result += direction_map[it];
-			last_orientation = orientation_map[it];
-			*ending_node = graph.target(it);
-		}
-
-		//get node n-1 of the path
-		last_car = "";
-		if (result.size() > 0) {
-			last_car = result.substr(result.size()-1, result.size());
-		}
-		result.pop_back();
+		return "";
 	}
+
+	//apply dijkstra to graph
+	std::vector<Arc> arcpath;
+	Dijkstra<Graph> dijkstra(graph, length);
+	dijkstra.run(target, orig);
+
+	//get back path
+	Dijkstra<Graph>::Path path = dijkstra.path(orig);
+	for(Dijkstra<Graph>::Path::RevArcIt it(path); it!=INVALID ; it.operator++() ) {
+		result += direction_map[it];
+	}
+
 	//mine->apply_command(result);
 	// orient corrctly;
-	if ((last_orientation == NORTH && source_orientation == SOUTH)
-		|| (last_orientation == SOUTH && source_orientation == NORTH)
-		|| (last_orientation == EAST && source_orientation == WEST)
-		|| (last_orientation == WEST && source_orientation == EAST)) {
-			result += "QQ";
-	} else if ((last_orientation == NORTH && source_orientation == EAST)
-		|| (last_orientation == EAST && source_orientation == SOUTH)
-		|| (last_orientation == SOUTH && source_orientation == WEST)
-		|| (last_orientation == WEST && source_orientation == NORTH)) {
-			result += "Q";
-	} else if ((last_orientation == NORTH && source_orientation == WEST)
-		|| (last_orientation == WEST && source_orientation == SOUTH)
-		|| (last_orientation == SOUTH && source_orientation == EAST)
-		|| (last_orientation == EAST && source_orientation == NORTH)) {
-			result += "E";
-	}
 	//result+=last_car;
 
 	//get all directions of the path in the result
@@ -460,7 +433,7 @@ vector<string> mine_state::get_next_valid_command() {
 	return ret;
 }
 
-const vector<position> additionnal_manipulators = {position(0, -1), position(2, 1), position(1,2), position(0, -2)};
+const vector<position> additionnal_manipulators = {position(0, -1), position(2, 1), position(-2,1), position(0, -2), position(0, 2), position(0, 3), position(0, -3)};
 string mine_state::strip(string commands) {
 	string ret = "";
 

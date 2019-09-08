@@ -8,14 +8,14 @@
 
 struct main_status {
 	mine_state *mine;
-	agent *ag;
+	string execution_list;
 };
 
 bool idle(void* user_param) {
 	struct main_status* status = (struct main_status*)user_param;
 	mine_state *mine = status->mine;
-	string command = status->ag->execution.substr(0,1);
-	status->ag->execution.erase(0, 1);
+	string command = status->execution_list.substr(0,1);
+	status->execution_list.erase(0, 1);
 	mine->apply_command(command);
 	return false;
 }
@@ -36,14 +36,14 @@ int main(int argc, char** argv) {
 	struct main_status status;
 	renderer* render;
 	int c;
-	bool load_result = false;
-	int instance = -1;
+	bool load_result = true;
+	int instance = 30;
 	string exec;
 	string fileName = "";
 
 	while ((c = getopt(argc, argv, "f:r:ahli:p:")) != -1) switch (c) {
 			case 'l':
-				load_result = true;
+				load_result = false;
 				break;
 			case 'i':
 				instance = atoi(optarg);
@@ -59,7 +59,7 @@ int main(int argc, char** argv) {
 			case 'h':
 			default:
 				print_help();
-				exit(0);
+				//exit(0);
 				break;
 		}
 
@@ -80,14 +80,14 @@ int main(int argc, char** argv) {
 		mine_state ag_mine(mine);
 		mine_navigator navigator(mine);
 
-		status.ag =  new agent(&ag_mine, &navigator);
+		//status.ag =  new agent(&ag_mine, &navigator, );
 		status.mine = mine;
 		render->set_mine(mine);
 
 		if (load_result) {
 			if (fileName == "") fileName = "./results/" + to_string(instance) + ".txt";
 			string execution = parse_result(fileName);
-			status.ag->set_execution_map(execution);
+			status.execution_list = execution;
 		}
 
 		//test
@@ -103,13 +103,12 @@ int main(int argc, char** argv) {
 		render->mainLoop();
 
 		cout << "time_step " << status.mine->time_step << endl;
-		cout << "score " << status.ag->get_cost()<< endl;
+		//cout << "score " << status.ag->get_cost()<< endl;
 		cout << "distance loss " << status.mine->distance_loss << endl;
 		cout << "useful " << status.mine->time_step - status.mine->distance_loss << endl;
 		cout << status.mine->distance_loss / status.mine->time_step * 100. << " %" <<endl;
 
 		delete render;
-		delete status.ag;
 		delete mine;
 
 		if (!do_all) return 0;
