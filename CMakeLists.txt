@@ -16,6 +16,5 @@ add_executable (solver src/solver.cpp src/genetic_splitter.cpp src/genetic_order
 target_link_libraries(orderer libemon.a allegro allegro_primitives allegro_main allegro_font allegro_ttf)
 target_link_libraries(partitionner libemon.a allegro allegro_primitives allegro_main allegro_font allegro_ttf)
 target_link_libraries(solver libemon.a allegro allegro_primitives allegro_main allegro_font allegro_ttf)
-#target_link_libraries(fuq-solver1)
 target_link_libraries(optimizer libemon.a)
 target_link_libraries(viz_ww allegro allegro_primitives allegro_main allegro_font allegro_ttf libemon.a)

@@ -11,7 +11,7 @@ static std::string getLastLine(std::ifstream& in) {
 
 string parse_result(string fileName) {
 	std::ifstream file(fileName);
-    if (!file.good()) return "";
+	if (!file.good()) return "";
 	if (file) {
 		std::string token;
 		std::string line = getLastLine(file);
@@ -33,7 +33,7 @@ string parse_result(string fileName) {
 vector<vector<position>> parse_split(string filename) {
 	vector<vector<position>> result;
 	std::ifstream file(filename);
-    if (!file.good()) return result;
+	if (!file.good()) return result;
 	if (file) {
 		string line;
 		while (getline(file, line)) {
@@ -41,9 +41,9 @@ vector<vector<position>> parse_split(string filename) {
 			position pos;
 			vector<position> lineresult;
 			int x, y;
-			char p1,v,p2,slash;
-			while (iss >> p1 >> x >> v >> y >>p2 >> slash) {
-				pos = position(x,y);
+			char p1, v, p2, slash;
+			while (iss >> p1 >> x >> v >> y >> p2 >> slash) {
+				pos = position(x, y);
 				lineresult.push_back(pos);
 			}
 			result.push_back(lineresult);

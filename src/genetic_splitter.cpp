@@ -16,7 +16,8 @@ using std::endl;
 using std::string;
 
 void genetic_graph_splitter::init_genes(
-	genetic_graph_splitter::MySolution& p, const std::function<double(void)>& rnd01) {
+	genetic_graph_splitter::MySolution& p,
+	const std::function<double(void)>& rnd01) {
 	int local_nb_of_zones = nb_of_zones;
 	nb_of_node_per_zone = nb_of_nodes / local_nb_of_zones;
 	while (local_nb_of_zones--) {
@@ -72,8 +73,8 @@ bool genetic_graph_splitter::eval_solution(const MySolution& p,
 }
 
 genetic_graph_splitter::MySolution genetic_graph_splitter::mutate(
-	const genetic_graph_splitter::MySolution& X_base, const std::function<double(void)>& rnd01,
-	double shrink_scale) {
+	const genetic_graph_splitter::MySolution& X_base,
+	const std::function<double(void)>& rnd01, double shrink_scale) {
 	MySolution X_new = X_base;
 	int index = rnd01() * X_base.split.size();
 	pair<Node, int> patch = X_base.split[index];
@@ -234,11 +235,8 @@ vector<vector<Node>> global_graph_splitter::solve(int population) {
 				divisor = 2;
 			} else if (patch.size() < 3 * target_nb_of_nodes_per_zone) {
 				divisor = 3;
-			} else //if (patch.size() < 4 * target_nb_of_nodes_per_zone) {
+			} else
 				divisor = 4;
-			/*} else {
-				divisor = 5;
-			}*/
 			Graph::NodeMap<bool> filtered(*graph, false);
 			for (auto it : patch) {
 				filtered[it] = true;
@@ -253,8 +251,7 @@ vector<vector<Node>> global_graph_splitter::solve(int population) {
 			cp.run();
 			genetic_graph_splitter suboptimizer(&temp_graph);
 			suboptimizer.nb_of_zones = divisor;
-			vector<vector<Node>> subsol_nodes =
-				suboptimizer.solve(population);
+			vector<vector<Node>> subsol_nodes = suboptimizer.solve(population);
 			vector<vector<Node>> mapped_subsol_nodes;
 			for (auto zone : subsol_nodes) {
 				vector<Node> temp_res;

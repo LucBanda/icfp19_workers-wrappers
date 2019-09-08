@@ -1,14 +1,14 @@
 #ifndef RENDERER_H
 #define RENDERER_H
 
+#include <lemon/adaptors.h>
 #include <math.h>
 #include <vector>
-#include "common.h"
 #include "allegro5/allegro.h"
 #include "allegro5/allegro_font.h"
 #include "allegro5/allegro_ttf.h"
+#include "common.h"
 #include "mine.h"
-#include <lemon/adaptors.h>
 
 #ifndef START_TIMER
 #define START_TIMER 0
@@ -48,9 +48,13 @@ class renderer {
 	renderer(int instance);
 	~renderer() {}
 	void mainLoop();
-	void set_mine(mine_state *arg_mine) {mine = arg_mine;}
-	void set_subgraph(mine_navigator *arg_nav, FilterNodes<Graph> *arg_subgraph) {nav = arg_nav; subgraph = arg_subgraph;}
-	void set_zones(vector<vector<position>> *zone_list) {zones = *zone_list;}
+	void set_mine(mine_state *arg_mine) { mine = arg_mine; }
+	void set_subgraph(mine_navigator *arg_nav,
+					  FilterNodes<Graph> *arg_subgraph) {
+		nav = arg_nav;
+		subgraph = arg_subgraph;
+	}
+	void set_zones(vector<vector<position>> *zone_list) { zones = *zone_list; }
 };
 
 #endif

@@ -2,9 +2,9 @@
 #include "common.h"
 
 #include <allegro5/allegro_primitives.h>
-#include "renderer.h"
-#include "mine.h"
 #include "fileparser.h"
+#include "mine.h"
+#include "renderer.h"
 
 #define MAP_RES 3000
 
@@ -18,12 +18,12 @@
 #define YELLOW_COL al_map_rgb(200, 200, 50)
 #define RED_COL al_map_rgb(200, 0, 0)
 
-#define TO_SCREEN(c)  SCREEN_W * (real(c) + 1) / SCALE, SCREEN_H - SCREEN_H * (imag(c) + 1) / SCALE
+#define TO_SCREEN(c) \
+	SCREEN_W *(real(c) + 1) / SCALE, SCREEN_H - SCREEN_H *(imag(c) + 1) / SCALE
 
-#define SHAPE_SCALE	1.
+#define SHAPE_SCALE 1.
 const int SCREEN_W = 2000. / SHAPE_SCALE;
 const int SCREEN_H = 2000. / SHAPE_SCALE;
-
 
 using namespace std;
 
@@ -39,119 +39,158 @@ renderer::renderer(int arg_instance) {
 	mode = NAVIGATE;
 	display_text = false;
 	instance = arg_instance;
-	zones = parse_split("./results/split-"+to_string(instance)+".txt");
-	ordered_zones = parse_split("./results/order-"+to_string(instance)+".txt");
+	zones = parse_split("./results/split-" + to_string(instance) + ".txt");
+	ordered_zones =
+		parse_split("./results/order-" + to_string(instance) + ".txt");
 }
 
 double start_radius = 0;
 void renderer::draw() {
-
 	SCALE = max(mine->max_size_x + 2, mine->max_size_y + 2);
 	al_draw_filled_rectangle(0, 0, SCREEN_W, SCREEN_H, BOULDER_COL);
 
 	if (!nav) {
-		for (int i = 0; i < mine->max_size_x ; i++) {
+		for (int i = 0; i < mine->max_size_x; i++) {
 			for (int j = 0; j < mine->max_size_y; j++) {
 				if (mine->board[i][j] == WALL) {
-					al_draw_filled_rectangle(TO_SCREEN(position(i,j)), TO_SCREEN(position(i,j) + position(1,1)), BOULDER_COL);
+					al_draw_filled_rectangle(
+						TO_SCREEN(position(i, j)),
+						TO_SCREEN(position(i, j) + position(1, 1)),
+						BOULDER_COL);
 				} else if (mine->board[i][j] == EMPTY) {
-					al_draw_filled_rectangle(TO_SCREEN(position(i,j)), TO_SCREEN(position(i,j) + position(1,1)), WHITE_COL);
+					al_draw_filled_rectangle(
+						TO_SCREEN(position(i, j)),
+						TO_SCREEN(position(i, j) + position(1, 1)), WHITE_COL);
 				} else if (mine->board[i][j] == PAINTED) {
-					al_draw_filled_rectangle(TO_SCREEN(position(i,j)), TO_SCREEN(position(i,j) + position(1,1)), YELLOW_COL);
+					al_draw_filled_rectangle(
+						TO_SCREEN(position(i, j)),
+						TO_SCREEN(position(i, j) + position(1, 1)), YELLOW_COL);
 				}
-
 			}
 		}
 	} else {
 		for (FilterNodes<Graph>::NodeIt it(*subgraph); it != INVALID; ++it) {
-				position to_screen_pos(TO_SCREEN(nav->coord_map[it]));
-				al_draw_filled_rectangle(TO_SCREEN(nav->coord_map[it]), TO_SCREEN(nav->coord_map[it] + position(1,1)), WHITE_COL);
+			position to_screen_pos(TO_SCREEN(nav->coord_map[it]));
+			al_draw_filled_rectangle(
+				TO_SCREEN(nav->coord_map[it]),
+				TO_SCREEN(nav->coord_map[it] + position(1, 1)), WHITE_COL);
 		}
 	}
 
-	complex<double> robot_centered_pos(mine->robot.real() + 0.5, mine->robot.imag() + 0.5);
-	al_draw_filled_circle(TO_SCREEN(robot_centered_pos), 10 / SHAPE_SCALE, ME_COL);
+	complex<double> robot_centered_pos(mine->robot.real() + 0.5,
+									   mine->robot.imag() + 0.5);
+	al_draw_filled_circle(TO_SCREEN(robot_centered_pos), 10 / SHAPE_SCALE,
+						  ME_COL);
 	vector<position> absolute_manipulators = mine->absolute_manipulators();
-	for (auto it = absolute_manipulators.begin(); it != absolute_manipulators.end(); ++it) {
-		complex<double> manip_centered_pos(mine->robot.real() + it->real() + 0.5, mine->robot.imag() + it->imag() + 0.5);
-		al_draw_circle(TO_SCREEN(manip_centered_pos), 2. / SHAPE_SCALE, ME_COL, 2.);
+	for (auto it = absolute_manipulators.begin();
+		 it != absolute_manipulators.end(); ++it) {
+		complex<double> manip_centered_pos(
+			mine->robot.real() + it->real() + 0.5,
+			mine->robot.imag() + it->imag() + 0.5);
+		al_draw_circle(TO_SCREEN(manip_centered_pos), 2. / SHAPE_SCALE, ME_COL,
+					   2.);
 	}
 
-	for (auto it = mine->drill_boosters.begin(); it != mine->drill_boosters.end(); ++it) {
-		complex<double> booster_centered_pos(it->real() + 0.5, it->imag() + 0.5);
-		al_draw_filled_circle(TO_SCREEN(booster_centered_pos), 10 / SHAPE_SCALE, DRILL_COL);
+	for (auto it = mine->drill_boosters.begin();
+		 it != mine->drill_boosters.end(); ++it) {
+		complex<double> booster_centered_pos(it->real() + 0.5,
+											 it->imag() + 0.5);
+		al_draw_filled_circle(TO_SCREEN(booster_centered_pos), 10 / SHAPE_SCALE,
+							  DRILL_COL);
 	}
-	for (auto it = mine->mystere_boosters.begin(); it != mine->mystere_boosters.end(); ++it) {
-		complex<double> booster_centered_pos(it->real() + 0.5, it->imag() + 0.5);
-		al_draw_filled_circle(TO_SCREEN(booster_centered_pos), 10 / SHAPE_SCALE, MYSTERIOUS_COL);
+	for (auto it = mine->mystere_boosters.begin();
+		 it != mine->mystere_boosters.end(); ++it) {
+		complex<double> booster_centered_pos(it->real() + 0.5,
+											 it->imag() + 0.5);
+		al_draw_filled_circle(TO_SCREEN(booster_centered_pos), 10 / SHAPE_SCALE,
+							  MYSTERIOUS_COL);
 	}
-	for (auto it = mine->fastwheels_boosters.begin(); it != mine->fastwheels_boosters.end(); ++it) {
-		complex<double> booster_centered_pos(it->real() + 0.5, it->imag() + 0.5);
-		al_draw_filled_circle(TO_SCREEN(booster_centered_pos), 10 / SHAPE_SCALE, FASTWHEEL_COL);
+	for (auto it = mine->fastwheels_boosters.begin();
+		 it != mine->fastwheels_boosters.end(); ++it) {
+		complex<double> booster_centered_pos(it->real() + 0.5,
+											 it->imag() + 0.5);
+		al_draw_filled_circle(TO_SCREEN(booster_centered_pos), 10 / SHAPE_SCALE,
+							  FASTWHEEL_COL);
 	}
-	for (auto it = mine->manipulators_boosters.begin(); it != mine->manipulators_boosters.end(); ++it) {
-		complex<double> booster_centered_pos(it->real() + 0.5, it->imag() + 0.5);
-		al_draw_filled_circle(TO_SCREEN(booster_centered_pos), 10 / SHAPE_SCALE, MANIP_COL);
+	for (auto it = mine->manipulators_boosters.begin();
+		 it != mine->manipulators_boosters.end(); ++it) {
+		complex<double> booster_centered_pos(it->real() + 0.5,
+											 it->imag() + 0.5);
+		al_draw_filled_circle(TO_SCREEN(booster_centered_pos), 10 / SHAPE_SCALE,
+							  MANIP_COL);
 	}
 	int red = 50;
 	int blue = 50;
 	int green = 50;
 	if (mode == ZONES || mode == ORDERED_ZONES) {
-		for (int i = 0; i < mine->max_size_x ; i++) {
+		for (int i = 0; i < mine->max_size_x; i++) {
 			for (int j = 0; j < mine->max_size_y; j++) {
-				position to_screen_pos(TO_SCREEN(position(i,j)));
+				position to_screen_pos(TO_SCREEN(position(i, j)));
 				if (mine->board[i][j] == WALL) {
-					al_draw_filled_rectangle(TO_SCREEN(position(i,j)), TO_SCREEN(position(i,j) + position(1,1)), BOULDER_COL);
+					al_draw_filled_rectangle(
+						TO_SCREEN(position(i, j)),
+						TO_SCREEN(position(i, j) + position(1, 1)),
+						BOULDER_COL);
 				} else if (mine->board[i][j] == EMPTY) {
-					al_draw_filled_rectangle(TO_SCREEN(position(i,j)), TO_SCREEN(position(i,j) + position(1,1)), RED_COL);
+					al_draw_filled_rectangle(
+						TO_SCREEN(position(i, j)),
+						TO_SCREEN(position(i, j) + position(1, 1)), RED_COL);
 				} else if (mine->board[i][j] == PAINTED) {
-					al_draw_filled_rectangle(TO_SCREEN(position(i,j)), TO_SCREEN(position(i,j) + position(1,1)), RED_COL);
+					al_draw_filled_rectangle(
+						TO_SCREEN(position(i, j)),
+						TO_SCREEN(position(i, j) + position(1, 1)), RED_COL);
 				}
-
 			}
 		}
 
-		for (auto zone:(mode == ZONES ? zones:ordered_zones)) {
-			for (auto pixel:zone) {
-				al_draw_filled_rectangle(TO_SCREEN(pixel), TO_SCREEN(pixel + position(1,1)), al_map_rgba(red, green, blue, 255));
+		for (auto zone : (mode == ZONES ? zones : ordered_zones)) {
+			for (auto pixel : zone) {
+				al_draw_filled_rectangle(TO_SCREEN(pixel),
+										 TO_SCREEN(pixel + position(1, 1)),
+										 al_map_rgba(red, green, blue, 255));
 			}
-			//al_draw_filled_rectangle(TO_SCREEN(zone[0]), TO_SCREEN(zone[0] + position(1,1)), al_map_rgba(0, 255, 0, 255));
-			complex<double> pos_of_sub_rectangle1 = complex<double>(zone[0].real(), zone[0].imag()) + complex<double>(0.2, 0.2);
-			complex<double> pos_of_sub_rectangle2 = pos_of_sub_rectangle1 + complex<double>(0.6, 0.6);
-			al_draw_filled_rectangle(TO_SCREEN(pos_of_sub_rectangle1), TO_SCREEN(pos_of_sub_rectangle2), al_map_rgba(255, 255, 255, 255));
+
+			complex<double> pos_of_sub_rectangle1 =
+				complex<double>(zone[0].real(), zone[0].imag()) +
+				complex<double>(0.2, 0.2);
+			complex<double> pos_of_sub_rectangle2 =
+				pos_of_sub_rectangle1 + complex<double>(0.6, 0.6);
+			al_draw_filled_rectangle(TO_SCREEN(pos_of_sub_rectangle1),
+									 TO_SCREEN(pos_of_sub_rectangle2),
+									 al_map_rgba(255, 255, 255, 255));
 			if (blue != 0) {
 				blue += 10;
-				if (blue > 235)
-					blue = 0;
+				if (blue > 235) blue = 0;
 			} else if (red != 0) {
 				red += 10;
-				if (red > 235)
-					red = 0;
+				if (red > 235) red = 0;
 			} else if (green != 0) {
 				green += 10;
-				if (green > 235)
-					green = 0;
+				if (green > 235) green = 0;
 			}
 			if (red == 0 && green == 0 && blue == 0) {
 				red = 25;
 				green = 25;
 				blue = 25;
 			}
-
 		}
 		if (display_text) {
 			int i = 0;
-			for (auto zone:(mode == ZONES ? zones:ordered_zones)) {
-				complex<double> pos_of_center = complex<double>(zone[0].real(), zone[0].imag()) + complex<double>(0.5, 0.5);
+			for (auto zone : (mode == ZONES ? zones : ordered_zones)) {
+				complex<double> pos_of_center =
+					complex<double>(zone[0].real(), zone[0].imag()) +
+					complex<double>(0.5, 0.5);
 
-				al_draw_text(debug_font, al_map_rgb(255,255,255), TO_SCREEN(pos_of_center), ALLEGRO_ALIGN_CENTER, to_string(i).c_str());
+				al_draw_text(debug_font, al_map_rgb(255, 255, 255),
+							 TO_SCREEN(pos_of_center), ALLEGRO_ALIGN_CENTER,
+							 to_string(i).c_str());
 				i++;
 			}
 		}
 	}
 }
 
-enum MYKEYS { KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_R};
+enum MYKEYS { KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_R };
 void renderer::mainLoop() {
 	ALLEGRO_DISPLAY *display = NULL;
 	ALLEGRO_EVENT_QUEUE *event_queue = NULL;
@@ -175,10 +214,11 @@ void renderer::mainLoop() {
 		fprintf(stderr, "failed to create timer!\n");
 		return;
 	}
-   al_init_font_addon(); // initialize the font addon
-   al_init_ttf_addon();// initialize the ttf (True Type Font) addon
+	al_init_font_addon();  // initialize the font addon
+	al_init_ttf_addon();   // initialize the ttf (True Type Font) addon
 
-   debug_font = al_load_ttf_font("./src/AllegroBT-Regular.otf",50 / SHAPE_SCALE,0 );
+	debug_font =
+		al_load_ttf_font("./src/AllegroBT-Regular.otf", 50 / SHAPE_SCALE, 0);
 
 	al_set_new_window_title(to_string(instance).c_str());
 
@@ -214,8 +254,8 @@ void renderer::mainLoop() {
 
 		if (ev.type == ALLEGRO_EVENT_TIMER) {
 			redraw = true;
-			//i += 1;
-			//if (i > draw_decimation) {
+			// i += 1;
+			// if (i > draw_decimation) {
 			if (!step_it || run_under_step) {
 				if (idle_param != NULL) doexit = idle(idle_param);
 				run_under_step = false;
@@ -249,16 +289,13 @@ void renderer::mainLoop() {
 			switch (ev.keyboard.keycode) {
 				case ALLEGRO_KEY_UP:
 					key[KEY_UP] = false;
-//					draw_decimation = draw_decimation + draw_decimation / 4.;
-					FPS =  FPS + FPS / 4;
+					FPS = FPS + FPS / 4;
 					al_set_timer_speed(timer, 1.0 / FPS);
 					break;
 
 				case ALLEGRO_KEY_DOWN:
 					key[KEY_DOWN] = false;
-					//if (draw_decimation <= 1) break;
-					//draw_decimation = draw_decimation - draw_decimation / 4.;
-					FPS =  FPS - FPS / 4;
+					FPS = FPS - FPS / 4;
 					al_set_timer_speed(timer, 1.0 / FPS);
 					break;
 
@@ -275,14 +312,14 @@ void renderer::mainLoop() {
 					break;
 
 				case ALLEGRO_KEY_R:
-				    mode = ZONES;
+					mode = ZONES;
 					key[KEY_R] = false;
 					break;
 				case ALLEGRO_KEY_T:
 					display_text = !display_text;
 					break;
 				case ALLEGRO_KEY_O:
-				    mode = ORDERED_ZONES;
+					mode = ORDERED_ZONES;
 					break;
 				case ALLEGRO_KEY_U:
 					mode = NAVIGATE;
@@ -320,7 +357,6 @@ void renderer::mainLoop() {
 				case ALLEGRO_KEY_SPACE:
 					run_under_step = true;
 					break;
-
 			}
 		} else {
 		}
