@@ -17,7 +17,7 @@ using std::cout;
 using std::endl;
 using std::string;
 
-int randomfunc(int j)
+static int randomfunc(int j)
 {
     return rand() % j;
 }

@@ -14,7 +14,7 @@ using std::cout;
 using std::endl;
 using std::string;
 
-int randomfunc(int j)
+static int randomfunc(int j)
 {
     return rand() % j;
 }
@@ -166,8 +166,6 @@ double genetic_optimizer::calculate_SO_total_fitness(const GA_Type::thisChromoso
 	return final_cost;
 }
 
-std::ofstream output_file;
-
 void genetic_optimizer::SO_report_generation(
 	int generation_number,
 	const EA::GenerationType<MySolution, MyMiddleCost>& last_generation,
@@ -252,86 +250,4 @@ pair<string, Node> genetic_optimizer::solve(int population_size) {
 	cout << "m= " << ga_obj.mutation_rate << ", c= " << ga_obj.crossover_fraction << ", e= " << ga_obj.elite_count << endl;
 
 	return ga_obj.last_generation.chromosomes[ga_obj.last_generation.best_chromosome_index].genes.to_string(this);
-}
-
-
-static void print_help() {
-	printf(
-		"options: \n"
-		"	-h : this help \n"
-		"	-i instance: instance of the problem to display \n"
-		"	-l : load the best solution so far for this problem \n"
-		"	-a from: do all problem from \"from\"\n"
-		"	-n number: number of thrust to optimize (default 1)\n"
-		"	-f factor: divider of fuel max to limit thrust range (default is "
-		"2)\n"
-		"	-p population: population of each generation (default 2000)\n"
-		"	-d : enable logging of chromosomes in a file\n");
-}
-
-int main(int argc, char** argv) {
-	bool do_all = false;
-	int start_instance = 0;
-	int c;
-	int population = 1000;
-	int gInstance = 6;
-
-	while ((c = getopt(argc, argv, "p:a:hi:")) != -1) switch (c) {
-			case 'i':
-				gInstance = atoi(optarg);
-				break;
-			case 'a':
-				do_all = true;
-				start_instance = atoi(optarg);
-				break;
-			case 'p':
-				population = atoi(optarg);
-				break;
-			case 'h':
-			default:
-				print_help();
-				//exit(0);
-		}
-
-	for (int i = start_instance; i < 150; i++) {
-		if (do_all) {
-			gInstance = i;
-		}
-		ostringstream padded_filename;
-		if (gInstance == -1)
-			padded_filename << "./part-1-examples/example-01.desc";
-		else
-			padded_filename << "./part-1-initial/prob-" << setw(3)
-							<< setfill('0') << gInstance << ".desc";
-		mine_state mine(padded_filename.str());
-		mine_navigator nav(&mine);
-
-		vector<vector<position>> zone_list = parse_split("./results/order-" + to_string(gInstance) + ".txt");
-		string solution;
-		Node start_of_zone = nav.initialNode;
-		for (int i = 0; i < zone_list.size(); i++) {
-			genetic_optimizer optimizer(gInstance, &nav, zone_list, i, start_of_zone, solution);
-			pair<string, Node> pair_sol =optimizer.solve(population);
-			solution = solution + pair_sol.first;
-			start_of_zone = pair_sol.second;
-			output_file.open("./results/" + to_string(gInstance) + ".txt", std::ofstream::trunc);
-			output_file << solution << endl;
-			output_file.close();
-		}
-
-		/*output_file.open("./results/" + to_string(gInstance) + ".txt");
-		output_file << "step"
-					<< "\t"
-					<< "cost_avg"
-					<< "\t"
-					<< "cost_best"
-					<< "\t"
-					<< "solution_best"
-					<< "\n";
-		output_file.close();*/
-		if (!do_all) {
-			return 0;
-		}
-	}
-	return 0;
 }
