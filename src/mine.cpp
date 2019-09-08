@@ -433,7 +433,20 @@ vector<string> mine_state::get_next_valid_command() {
 	return ret;
 }
 
-const vector<position> additionnal_manipulators = {position(0, -1), position(2, 1), position(-2,1), position(0, -2), position(0, 2), position(0, 3), position(0, -3)};
+const vector<position> additionnal_manipulators =
+	{position(0, -1),
+	 position(2, 1),
+	 position(-2,1),
+	 position(0, -2),
+	 position(0, 2),
+	 position(0, 3),
+	 position(0, -3),
+	 position(3, 1),
+	 position(-3, 1),
+	 position(4, 0),
+	 position(-4, 0),
+	 position(4, 1),
+	 position(-4, 1)};
 string mine_state::strip(string commands) {
 	string ret = "";
 
