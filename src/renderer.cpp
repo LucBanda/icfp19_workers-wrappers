@@ -81,12 +81,11 @@ void renderer::draw() {
 									   mine->robot.imag() + 0.5);
 	al_draw_filled_circle(TO_SCREEN(robot_centered_pos), 10 / SHAPE_SCALE,
 						  ME_COL);
-	vector<position> absolute_manipulators = mine->absolute_manipulators();
-	for (auto it = absolute_manipulators.begin();
-		 it != absolute_manipulators.end(); ++it) {
+	vector<position> absolute_manipulators = mine->absolute_valid_manipulators();
+	for (auto it: absolute_manipulators) {
 		complex<double> manip_centered_pos(
-			mine->robot.real() + it->real() + 0.5,
-			mine->robot.imag() + it->imag() + 0.5);
+			it.real() + 0.5,
+			it.imag() + 0.5);
 		al_draw_circle(TO_SCREEN(manip_centered_pos), 2. / SHAPE_SCALE, ME_COL,
 					   2.);
 	}

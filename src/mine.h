@@ -4,7 +4,6 @@
 #include "common.h"
 #include "complex"
 
-typedef complex<int> position;
 
 enum map_tile {
 	EMPTY,
@@ -64,7 +63,7 @@ class mine_state {
 	bool board_tile_is_painted(position tile);
 	bool board_tile_is_wall(position tile);
 	bool board_tile_has_booster(position tile);
-	vector<position> absolute_manipulators();
+	vector<position> absolute_valid_manipulators();
 
 	int non_validated_tiles;
 	enum map_tile **board;

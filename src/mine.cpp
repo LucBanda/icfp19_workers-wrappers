@@ -3,6 +3,7 @@
 #include <lemon/dfs.h>
 #include <lemon/dijkstra.h>
 #include <lemon/graph_to_eps.h>
+#include <unordered_map>
 
 #define BOARD_TILE_IS_WALL(x)                                        \
 	((x).real() < 0 || (x).real() >= max_size_x || (x).imag() < 0 || \
@@ -14,6 +15,34 @@
 	((x).real() >= 0 && (x).real() < max_size_x && (x).imag() >= 0 && \
 	 (x).imag() < max_size_y && board[(x).real()][(x).imag()] == PAINTED)
 #define BOARD_TILE(x) board[(x).real()][(x).imag()]
+
+  /*relative_manipulators.push_back(position(0, 1));
+	relative_manipulators.push_back(position(1, 1));
+	relative_manipulators.push_back(position(-1, 1));
+	relative_manipulators.push_back(position(0, 0));*/
+
+static const vector<position> additionnal_manipulators = {
+	position(2, 1), position(-2, 1), position(0, -1), position(0, -2),
+	position(0, 2),  position(0, 3), position(0, -3), position(3, 1),
+	position(-3, 1), position(4, 0), position(-4, 0), position(4, 1),
+	position(-4, 1)};
+
+static const vector<vector<position>> manipulators_masks = {
+	{position(0, 1)}, {position(1,1)}, {position(-1, 1)}, {position(0,0)}, //those are the four default manipulators
+	{position (2,1), position(1,1), position(1,0)},
+	{position (-2,1), position(-1,1), position(-1,0)},
+	{position(0,-1)},
+	{position (0,-2)},
+	{position (0,2)},
+	{position (0,3)},
+	{position (0,-3)},
+	{position (3,1), position(1,0), position(2,1)},
+	{position (-3,1), position(-1,0), position(-2,1)},
+	{position (4,0)},
+	{position (-4,0)},
+	{position (4,1), position(1,0), position(2,0), position(2,1), position(3,1)},
+	{position (-4,1), position(-1,0), position(-2,0), position(-2,1), position(-3,1)},
+};
 
 static string get_next_tuple_token(string *line) {
 	string token;
@@ -107,6 +136,13 @@ mine_state::mine_state(mine_state *base_mine) {
 	max_size_y = base_mine->max_size_y;
 	non_validated_tiles = base_mine->non_validated_tiles;
 	relative_manipulators = base_mine->relative_manipulators;
+	/*for (auto elem:base_mine->relative_manip_mask){
+		vector<position> list;
+		for (auto mask:elem.second) {
+			list.push_back(mask);
+		}
+		relative_manip_mask[elem.first] = list;
+	}*/
 	owned_fastwheels_boosters = 0;
 	owned_drill_boosters = 0;
 	owned_manipulators_boosters = 0;
@@ -141,31 +177,40 @@ bool mine_state::board_tile_is_wall(position tile) {
 	return BOARD_TILE_IS_WALL(tile);
 }
 
-vector<position> mine_state::absolute_manipulators() {
+vector<position> mine_state::absolute_valid_manipulators() {
 	vector<position> result;
+	position multiplier(1,0);
 
-	for (auto &it : relative_manipulators) {
-		switch (current_orientation) {
-			case NORTH:
-				result.push_back(it);
-				break;
-			case SOUTH:
-				result.push_back(-it);
-				break;
-			case WEST:
-				result.emplace_back(-it.imag(), it.real());
-				break;
-			case EAST:
-				result.emplace_back(it.imag(), -it.real());
-				break;
-			default:
-				break;
+	switch (current_orientation) {
+		case NORTH:
+			multiplier = position(1,0);
+			break;
+		case SOUTH:
+			multiplier = position(-1,0);
+			break;
+		case WEST:
+			multiplier = position(0,1);
+			break;
+		case EAST:
+			multiplier = position(0,-1);
+			break;
+		default:
+			break;
+	}
+
+	for (int i = 0; i < relative_manipulators.size(); i++) {
+		bool should_apply = true;
+		for (auto mask:manipulators_masks[i]) {
+			if (BOARD_TILE_IS_WALL(mask * multiplier + robot)) {
+				should_apply = false;
+			}
+		}
+		if (should_apply) {
+			result.push_back(robot + relative_manipulators[i] * multiplier);
 		}
 	}
 	return result;
 }
-
-typedef dim2::Point<int> Point;
 
 vector<vector<Node>> mine_navigator::node_from_coords(
 	vector<vector<position>> pos_list) {
@@ -400,13 +445,9 @@ mine_state::mine_state(string filename) {
 	relative_manipulators.push_back(position(0, 0));
 	// validate points
 	current_orientation = EAST;
-	vector<position> absolute_manip = absolute_manipulators();
-	for (auto it = absolute_manip.begin(); it != absolute_manip.end(); ++it) {
-		position pos_to_remove = *it + robot;
-		if (!board_tile_is_wall(pos_to_remove)) {
-			non_validated_tiles--;
-			BOARD_TILE(pos_to_remove) = PAINTED;
-		}
+	vector<position> absolute_manip = absolute_valid_manipulators();
+	for (auto it:absolute_manip) {
+		BOARD_TILE(it) = PAINTED;
 	}
 	owned_fastwheels_boosters = 0;
 	owned_drill_boosters = 0;
@@ -436,11 +477,6 @@ vector<string> mine_state::get_next_valid_command() {
 	return ret;
 }
 
-const vector<position> additionnal_manipulators = {
-	position(0, -1), position(2, 1), position(-2, 1), position(0, -2),
-	position(0, 2),  position(0, 3), position(0, -3), position(3, 1),
-	position(-3, 1), position(4, 0), position(-4, 0), position(4, 1),
-	position(-4, 1)};
 string mine_state::strip(string commands) {
 	string ret = "";
 
@@ -514,18 +550,10 @@ void mine_state::apply_command(string command) {
 
 		// validate tiles
 		bool validated = false;
-		auto absolute_manip = absolute_manipulators();
-		for (auto it = absolute_manip.begin(); it != absolute_manip.end();
-			 ++it) {
-			position pos_to_remove = *it + robot;
-			if (BOARD_TILE_IS_EMPTY(pos_to_remove)) {
-				non_validated_tiles--;
-				if (non_validated_tiles < 0) {
-					cout << "issue" << endl;
-				}
-				BOARD_TILE(pos_to_remove) = PAINTED;
-				validated = true;
-			}
+		auto absolute_manip = absolute_valid_manipulators();
+		for (auto it:absolute_manip) {
+			BOARD_TILE(it) = PAINTED;
+			validated = true;
 		}
 		if (validated == false && !invalid_move) {
 			distance_loss++;

@@ -20,13 +20,13 @@
 using namespace std;
 using namespace lemon;
 
-typedef std::complex<double> Complex;
+//typedef std::complex<double> Complex;
 typedef SmartDigraph::Node Node;
 typedef SmartDigraph::Arc Arc;
 typedef SmartDigraph::NodeIt NodeIt;
 typedef SmartDigraph::ArcIt ArcIt;
 typedef SmartDigraph Graph;
 typedef FilterNodes<SmartDigraph> lSubGraph;
-
+typedef complex<int> position;
 
 #endif
