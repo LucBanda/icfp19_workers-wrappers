@@ -6,8 +6,8 @@
 #include <unordered_map>
 
 #define BOARD_TILE_IS_WALL(x)                                        \
-	((x).real() < 0 || (x).real() >= max_size_x || (x).imag() < 0 || \
-	 (x).imag() >= max_size_y || board[(x).real()][(x).imag()] == WALL)
+	(((x).real() < 0) || ((x).real() >= max_size_x) || ((x).imag() < 0) || \
+	 ((x).imag() >= max_size_y) || board[(x).real()][(x).imag()] == WALL)
 #define BOARD_TILE_IS_EMPTY(x)                                        \
 	((x).real() >= 0 && (x).real() < max_size_x && (x).imag() >= 0 && \
 	 (x).imag() < max_size_y && board[(x).real()][(x).imag()] == EMPTY)
@@ -88,7 +88,6 @@ static vector<position> parse_token_list(string line) {
 	tokenend = t_line.find(close_delimiter);
 	while (tokenpos != t_line.npos) {
 		token = t_line.substr(tokenpos, tokenend + 1);
-		// cout << token << endl;
 		list.push_back(parse_position(token));
 		t_line.erase(
 			0, tokenend + close_delimiter.length() + open_delimiter.length());
@@ -136,18 +135,11 @@ mine_state::mine_state(mine_state *base_mine) {
 	max_size_y = base_mine->max_size_y;
 	non_validated_tiles = base_mine->non_validated_tiles;
 	relative_manipulators = base_mine->relative_manipulators;
-	/*for (auto elem:base_mine->relative_manip_mask){
-		vector<position> list;
-		for (auto mask:elem.second) {
-			list.push_back(mask);
-		}
-		relative_manip_mask[elem.first] = list;
-	}*/
-	owned_fastwheels_boosters = 0;
-	owned_drill_boosters = 0;
-	owned_manipulators_boosters = 0;
-	time_step = 0;
-	distance_loss = 0;
+	owned_fastwheels_boosters =  base_mine->owned_fastwheels_boosters;
+	owned_drill_boosters =  base_mine->owned_drill_boosters;
+	owned_manipulators_boosters = base_mine->owned_manipulators_boosters;
+	time_step = base_mine->time_step;
+	distance_loss = base_mine->distance_loss;
 	current_orientation = base_mine->current_orientation;
 	board = (enum map_tile **)calloc(max_size_x, sizeof(enum map_tile *));
 	for (int i = 0; i < max_size_x; i++) {
@@ -552,8 +544,10 @@ void mine_state::apply_command(string command) {
 		bool validated = false;
 		auto absolute_manip = absolute_valid_manipulators();
 		for (auto it:absolute_manip) {
-			BOARD_TILE(it) = PAINTED;
-			validated = true;
+			if (BOARD_TILE(it) != PAINTED) {
+				BOARD_TILE(it) = PAINTED;
+				validated = true;
+			}
 		}
 		if (validated == false && !invalid_move) {
 			distance_loss++;
