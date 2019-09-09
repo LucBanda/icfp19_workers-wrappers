@@ -192,10 +192,6 @@ genetic_optimizer::genetic_optimizer(int arg_instance, mine_navigator* arg_nav,
 	zone_id = arg_zone_id;
 	base_mine.apply_command(start_string);
 	zones = navigator->node_from_coords(arg_zones);
-	cout << "input:" << start_string
-		 << " node: " << navigator->graph.id(start_node)
-		 << " coord: " << navigator->coord_map[start_node]
-		 << " orientation: " << base_mine.current_orientation << endl;
 }
 genetic_optimizer::~genetic_optimizer() {}
 
@@ -222,19 +218,14 @@ pair<string, Node> genetic_optimizer::solve(int population_size) {
 	ga_obj.crossover =
 		std::bind(&genetic_optimizer::crossover, this, _1, _2, _3);
 	ga_obj.SO_report_generation =
-		std::bind(&genetic_optimizer::SO_report_generation, this, _1, _2, _3);
+		std::bind(&genetic_optimizer::SO_report_generation_empty, this, _1, _2, _3);
 	ga_obj.crossover_fraction = 0.7;
 	ga_obj.mutation_rate = 0.3;
 	ga_obj.best_stall_max = 20;
 	ga_obj.average_stall_max = 20;
 	ga_obj.elite_count = 50;
-	EA::StopReason reason = ga_obj.solve();
-	cout << "The problem is optimized in " << timer.toc() << " seconds."
-		 << endl;
-	cout << "cause: " << ga_obj.stop_reason_to_string(reason) << endl;
-	cout << "m= " << ga_obj.mutation_rate
-		 << ", c= " << ga_obj.crossover_fraction
-		 << ", e= " << ga_obj.elite_count << endl;
+
+	ga_obj.solve();
 
 	return ga_obj.last_generation
 		.chromosomes[ga_obj.last_generation.best_chromosome_index]

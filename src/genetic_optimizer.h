@@ -45,6 +45,10 @@ class genetic_optimizer {
 		int generation_number,
 		const EA::GenerationType<MySolution, MyMiddleCost>& last_generation,
 		const MySolution& best_genes);
+    void SO_report_generation_empty(
+		int generation_number,
+		const EA::GenerationType<MySolution, MyMiddleCost>&last_generation,
+        const MySolution& best_genes){};
 };
 
 struct MySolution {
