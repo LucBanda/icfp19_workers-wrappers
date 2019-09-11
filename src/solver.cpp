@@ -39,7 +39,7 @@ int main(int argc, char** argv) {
 	int start_instance = 0;
 	int c;
 	int population1 = 3000;
-	int population2 = 6000;
+	int population2 = 5000;
 	int population3 = 3000;
 	int gInstance = 4;
 	int region_size = 50;
@@ -98,9 +98,7 @@ int main(int argc, char** argv) {
 			population3 = 3000;
 			problems.push_back(make_tuple(i, region_size, population1, population2, population3));
 		}
-	}
-
-	if (testbench) {
+	} else if (testbench) {
 		problems.clear();
 		perform_partitionning = true;
 		perform_ordering = true;
@@ -112,6 +110,8 @@ int main(int argc, char** argv) {
 		output_file.open("./testbench/" + testbench_identifier + ".txt",
 						std::ofstream::app);
 		output_file << "----------------------------------------------------------" << endl;
+	} else {
+		problems.emplace_back(gInstance, region_size, population1, population2, population3);
 	}
 	EA::Chronometer timer;
 
