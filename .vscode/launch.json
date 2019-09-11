@@ -48,6 +48,20 @@
         ]
 
     },
+    {
+        "type": "lldb",
+        "request": "custom",
+        "name": "solver",
+        "targetCreateCommands": [
+            "target create ${workspaceFolder}/build/solver"
+        ],
+
+        "processCreateCommands": [
+            "settings set target.run-args value1 value2 value3",
+            "process launch"
+        ]
+
+    },
 
         /*{
             "type": "lldb-mi",

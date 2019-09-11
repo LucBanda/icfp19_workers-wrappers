@@ -12,6 +12,7 @@
 #include "openga.hpp"
 #include "renderer.h"
 #include "sys/time.h"
+#include <set>
 
 using std::cout;
 using std::endl;
@@ -30,6 +31,82 @@ void genetic_orderer::init_genes(MySolution& p,
 	p.split.insert(p.split.end(), nodes.begin(), nodes.end());
 }
 
+pair<vector<SmartGraph::Node>, int> genetic_orderer::execute_sequence(const genetic_orderer::MySolution &p) {
+	vector<SmartGraph::Node> result_order;
+	int result_score = 0;
+
+	SmartGraph::Node orig = starting_node;
+	SmartGraph::NodeMap<bool> filled(graph, false);
+	SmartGraph::EdgeMap<int> length(graph, 1);
+
+	SmartGraph::Node dest;
+	int manip_boosters_catches = 0;
+	int fastwheel_boosters_credit = 0;
+
+	//start with start node
+	result_score = start_zone.size(); //get its cost
+	filled[starting_node] = true;
+	for (SmartGraph::IncEdgeIt e(graph, starting_node); e != INVALID; ++e) {
+		length[e] = cost[e]; // new length if going through a node is approximated to the distance of the centers
+	}
+	//result_order.push_back(starting_node);
+
+	for (auto it = p.split.begin(); it != p.split.end(); ++it) {
+		dest = *it;
+		if (filled[dest]) {
+			//if next node to visit is filled, do not take it into account
+			continue;
+		}
+		Dijkstra<SmartGraph, SmartGraph::EdgeMap<int>> dijkstra(graph, length);
+
+		dijkstra.run(orig, dest);
+		//auto path = dijkstra.path(dest);
+		vector<SmartGraph::Edge> pathEdges;
+		vector<SmartGraph::Node> pathNodes;
+		SmartGraph::Edge predEdge = dijkstra.predArc(dest);
+		SmartGraph::Node predNode = dijkstra.predNode(dest);
+		while (predEdge != INVALID) {
+			pathEdges.push_back(predEdge);
+			pathNodes.push_back(predNode);
+			predEdge = dijkstra.predArc(predNode);
+			predNode = dijkstra.predNode(predNode);
+		}
+		reverse(pathEdges.begin(), pathEdges.end());
+		reverse(pathNodes.begin(), pathNodes.end());
+		pathNodes.push_back(dest);
+		int path_cost = 0;
+		int zone_cost = 0;
+		for (int i = 0; i < pathNodes.size(); i++) {
+			auto zone = pathNodes[i];
+			if (zone != dest) {
+				auto edge = pathEdges[i];
+				path_cost += length[edge];
+			}
+			if (!filled[zone]) {
+				zone_cost += submine_to_mine_nodes[zone].size() / (1. + manip_boosters_catches / 2.);
+				result_order.push_back(zone);
+				filled[zone] = true;
+				// from now on, dest is considered validated as well as non validated nodes on the path
+				// update length map for next dijkstras
+				for (SmartGraph::IncEdgeIt e(graph, zone); e != INVALID; ++e) {
+					length[e] = cost[e]; // new length if going through a node is approximated to the distance of the centers
+				}
+							//collect boosters
+				for (auto boost:boosters_map[zone])
+					if (boost == MANIPULATOR) {
+						manip_boosters_catches++;
+					} else if (boost == FASTWHEEL) {
+						fastwheel_boosters_credit += 50;
+					}
+			}
+		}
+		orig = dest;
+		//here we should consider discount of fastwheel
+		result_score += zone_cost + path_cost;
+	}
+	return make_pair(result_order, result_score);
+
+}
 // evaluate the solution by walking through edges and adding distances.
 // a factor should be applied to following sequences if a booster is in a zone
 // all following distances are multiplied by 0.9 for a manipulator
@@ -37,20 +114,9 @@ void genetic_orderer::init_genes(MySolution& p,
 // other calculation should be done for drill if supported
 bool genetic_orderer::eval_solution(const genetic_orderer::MySolution& p,
 									MyMiddleCost& c) {
-	c.objective1 = 0;
-	SmartGraph::Node orig = starting_node;
-	SmartGraph::Node dest;
-	c.objective1 = 0;
-	for (auto it = p.split.begin(); it != p.split.end(); ++it) {
-		dest = *it;
-		for (SmartGraph::IncEdgeIt e(graph, orig); e != INVALID; ++e) {
-			if (graph.v(e) == dest) {
-				orig = dest;
-				c.objective1 += cost[e];
-				break;
-			}
-		}
-	}
+
+	auto result = execute_sequence(p);
+	c.objective1 = result.second;
 	return true;
 }
 
@@ -159,41 +225,64 @@ void genetic_orderer::SO_report_generation(
 }
 
 genetic_orderer::genetic_orderer(mine_navigator& arg_nav,
-								 vector<Node>& arg_zone_centers)
-	: nav(arg_nav), submine_to_mine_nodes(graph), cost(graph) {
-	Dijkstra<Graph> dijkstra(nav.graph, nav.length);
-	dijkstra.run(nav.robot_pos);
-	int smallest_len = countNodes(nav.graph);
+								 vector<vector<Node>>& zones)
+	: nav(arg_nav), submine_to_mine_nodes(graph), boosters_map(graph), cost(graph) {
 
-	// calculate the starting zone by applying dijstra between center nodes and
-	// starting point
-	for (auto zone : arg_zone_centers) {
-		if (dijkstra.distMap()[zone] < smallest_len) {
-			start_zone = zone;
-			smallest_len = dijkstra.distMap()[zone];
+
+	//make the map from node of original graph to zone
+	Graph::NodeMap<vector<Node>> node_to_zone_map(nav.graph);
+	for (auto zone:zones) {
+		for (auto node:zone) {
+			node_to_zone_map[node] = zone;
 		}
 	}
 
-	// create graph of centers
-	for (auto zone : arg_zone_centers) {
-		SmartGraph::Node u = graph.addNode();
-		submine_to_mine_nodes[u] = zone;
-		if (zone != start_zone)
-			node_list.push_back(u);
-		else
-			starting_node = u;
+	// calculate the starting zone by applying dijstra between center nodes and
+	// starting point
+	for (auto zone : zones) {
+		if (find(zone.begin(), zone.end(), nav.robot_pos) != zone.end()) {
+			start_zone = zone;
+		}
 	}
 
-	// calculate distances of centers and add that as edges of the graph
+
+	// create graph of zones
+	for (auto zone : zones) {
+		SmartGraph::Node u = graph.addNode();
+		submine_to_mine_nodes[u] = zone;
+		if (zone != start_zone) {
+			node_list.push_back(u);
+		}
+		else
+			starting_node = u;
+		boosters_map[u] = arg_nav.boosters_in_node_list(zone);
+	}
+
+	// calculate adjacent zones with bfs from the center
 	for (SmartGraph::NodeIt orig(graph); orig != INVALID; ++orig) {
-		for (SmartGraph::NodeIt dest(graph); dest != INVALID; ++dest) {
-			if (orig != dest) {
-				Dijkstra<Graph> dijkstra(nav.graph, nav.length);
-				dijkstra.run(submine_to_mine_nodes[orig],
-							 submine_to_mine_nodes[dest]);
-				SmartGraph::Edge e = graph.addEdge(orig, dest);
-				int cost_score = dijkstra.dist(submine_to_mine_nodes[dest]);
-				cost[e] = cost_score;
+		set<vector<Node>> neighbors;
+		for (auto node:submine_to_mine_nodes[orig]) {
+			//iterate over all cell of zone, if a neighbor of the cell is not in the current zone, find the zone of the neigbor
+			for(Graph::OutArcIt arc(nav.graph, node); arc != INVALID; ++arc) {
+				auto arc_target = nav.graph.target(arc);
+				if (find(submine_to_mine_nodes[orig].begin(), submine_to_mine_nodes[orig].end(), arc_target) == submine_to_mine_nodes[orig].end()) {
+					//neighbor found
+					auto res = node_to_zone_map[arc_target];
+					neighbors.insert(res);
+				}
+			}
+		}
+		//populate edges from neighbors
+		for (auto nb:neighbors) {
+			for (SmartGraph::NodeIt dest(graph); dest!= INVALID; ++dest) {
+				if (submine_to_mine_nodes[dest] == nb) {
+					SmartGraph::Edge e = graph.addEdge(orig, dest);
+					Dijkstra<Graph> dijkstra(nav.graph, nav.length);
+					dijkstra.run(submine_to_mine_nodes[orig][0],
+								submine_to_mine_nodes[dest][0]);
+					int cost_score = dijkstra.dist(submine_to_mine_nodes[dest][0]);
+					cost[e] = cost_score;
+				}
 			}
 		}
 	}
@@ -203,7 +292,7 @@ genetic_orderer::~genetic_orderer() {}
 
 // here we apply genetic algorithm to the population of pathes between all
 // centers the goal is to determine the shortest path going through all zones
-vector<Node> genetic_orderer::solve(int population_size) {
+vector<vector<Node>> genetic_orderer::solve(int population_size) {
 	using namespace std::placeholders;
 
 	EA::Chronometer timer;
@@ -215,7 +304,7 @@ vector<Node> genetic_orderer::solve(int population_size) {
 	ga_obj.dynamic_threading = false;
 	ga_obj.verbose = false;
 	ga_obj.population = population_size;
-	ga_obj.generation_max = 3000;
+	ga_obj.generation_max = 6000;
 	ga_obj.calculate_SO_total_fitness =
 		std::bind(&genetic_orderer::calculate_SO_total_fitness, this, _1);
 	ga_obj.init_genes = std::bind(&genetic_orderer::init_genes, this, _1, _2);
@@ -223,24 +312,31 @@ vector<Node> genetic_orderer::solve(int population_size) {
 		std::bind(&genetic_orderer::eval_solution, this, _1, _2);
 	ga_obj.mutate = std::bind(&genetic_orderer::mutate, this, _1, _2, _3);
 	ga_obj.crossover = std::bind(&genetic_orderer::crossover, this, _1, _2, _3);
-	ga_obj.SO_report_generation = std::bind(
-		&genetic_orderer::SO_report_generation_empty, this, _1, _2, _3);
+	if (verbose) {
+		ga_obj.SO_report_generation = std::bind(
+			&genetic_orderer::SO_report_generation, this, _1, _2, _3);
+	} else {
+		ga_obj.SO_report_generation = std::bind(
+			&genetic_orderer::SO_report_generation_empty, this, _1, _2, _3);
+	}
 	ga_obj.crossover_fraction = 0.7;
 	ga_obj.mutation_rate = 0.3;
-	ga_obj.best_stall_max = 50;
-	ga_obj.average_stall_max = 30;
-	ga_obj.elite_count = 100;
+	ga_obj.best_stall_max = 30;
+	ga_obj.average_stall_max = 10;
+	ga_obj.elite_count = 10;
 
 	ga_obj.solve();
 
 	// put result in form, get back original centers from center graph
-	vector<SmartGraph::Node> solution =
-		ga_obj.last_generation
+	auto seq = ga_obj.last_generation
 			.chromosomes[ga_obj.last_generation.best_chromosome_index]
-			.genes.split;
-	solution.insert(solution.begin(), starting_node);
-	vector<Node> result;
-	for (auto n : solution) {
+			.genes;
+	auto seq_result = execute_sequence(seq);
+
+	seq_result.first.insert(seq_result.first.begin(), starting_node);
+
+	vector<vector<Node>> result;
+	for (auto n : seq_result.first) {
 		result.push_back(submine_to_mine_nodes[n]);
 	}
 	return result;

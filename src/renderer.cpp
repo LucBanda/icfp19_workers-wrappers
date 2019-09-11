@@ -49,31 +49,22 @@ void renderer::draw() {
 	SCALE = max(mine->max_size_x + 2, mine->max_size_y + 2);
 	al_draw_filled_rectangle(0, 0, SCREEN_W, SCREEN_H, BOULDER_COL);
 
-	if (!nav) {
-		for (int i = 0; i < mine->max_size_x; i++) {
-			for (int j = 0; j < mine->max_size_y; j++) {
-				if (mine->board[i][j] == WALL) {
-					al_draw_filled_rectangle(
-						TO_SCREEN(position(i, j)),
-						TO_SCREEN(position(i, j) + position(1, 1)),
-						BOULDER_COL);
-				} else if (mine->board[i][j] == EMPTY) {
-					al_draw_filled_rectangle(
-						TO_SCREEN(position(i, j)),
-						TO_SCREEN(position(i, j) + position(1, 1)), WHITE_COL);
-				} else if (mine->board[i][j] == PAINTED) {
-					al_draw_filled_rectangle(
-						TO_SCREEN(position(i, j)),
-						TO_SCREEN(position(i, j) + position(1, 1)), YELLOW_COL);
-				}
+	for (int i = 0; i < mine->max_size_x; i++) {
+		for (int j = 0; j < mine->max_size_y; j++) {
+			if (mine->board[i][j] == WALL) {
+				al_draw_filled_rectangle(
+					TO_SCREEN(position(i, j)),
+					TO_SCREEN(position(i, j) + position(1, 1)),
+					BOULDER_COL);
+			} else if (mine->board[i][j] == EMPTY) {
+				al_draw_filled_rectangle(
+					TO_SCREEN(position(i, j)),
+					TO_SCREEN(position(i, j) + position(1, 1)), WHITE_COL);
+			} else if (mine->board[i][j] == PAINTED) {
+				al_draw_filled_rectangle(
+					TO_SCREEN(position(i, j)),
+					TO_SCREEN(position(i, j) + position(1, 1)), YELLOW_COL);
 			}
-		}
-	} else {
-		for (FilterNodes<Graph>::NodeIt it(*subgraph); it != INVALID; ++it) {
-			position to_screen_pos(TO_SCREEN(nav->coord_map[it]));
-			al_draw_filled_rectangle(
-				TO_SCREEN(nav->coord_map[it]),
-				TO_SCREEN(nav->coord_map[it] + position(1, 1)), WHITE_COL);
 		}
 	}
 
@@ -158,19 +149,19 @@ void renderer::draw() {
 									 TO_SCREEN(pos_of_sub_rectangle2),
 									 al_map_rgba(255, 255, 255, 255));
 			if (blue != 0) {
-				blue += 10;
+				blue += 30;
 				if (blue > 235) blue = 0;
 			} else if (red != 0) {
-				red += 10;
+				red += 30;
 				if (red > 235) red = 0;
 			} else if (green != 0) {
-				green += 10;
+				green += 30;
 				if (green > 235) green = 0;
 			}
 			if (red == 0 && green == 0 && blue == 0) {
-				red = 25;
-				green = 25;
-				blue = 25;
+				red = 15;
+				green = 15;
+				blue = 15;
 			}
 		}
 		if (display_text) {

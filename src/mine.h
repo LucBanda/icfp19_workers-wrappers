@@ -20,21 +20,29 @@ enum orientation {
 
 class mine_state;
 
+enum Booster {
+	FASTWHEEL,
+	MANIPULATOR,
+	DRILL,
+	MYSTERE,
+};
+
 class mine_navigator {
    public:
 	mine_navigator(mine_state *mine_base);
 	~mine_navigator(){};
 	void init_graph();
-	void init_ordered_map();
 	string goto_node(Node orig, Node target);
 	mine_state *mine;
 
 	vector<Node> get_node_list();
-	vector<Node> get_bfs_from_node(Node start, int depth);
 	vector<vector<position>> list_of_coords_from_nodes(
 		const vector<vector<Node>> list);
 	vector<vector<Node>> node_from_coords(vector<vector<position>> pos_list);
+	Node node_from_coord(position pos);
+
 	string get_orientation(orientation source, orientation target);
+	vector<Booster> boosters_in_node_list(vector<Node> zone);
 
 	Graph graph;
 	Graph::NodeMap<position> coord_map;
@@ -64,6 +72,7 @@ class mine_state {
 	bool board_tile_is_wall(position tile);
 	bool board_tile_has_booster(position tile);
 	vector<position> absolute_valid_manipulators();
+	vector<Booster> boosters_in_position_list(vector<position> list);
 
 	int non_validated_tiles;
 	enum map_tile **board;

@@ -22,16 +22,16 @@
 	relative_manipulators.push_back(position(0, 0));*/
 
 static const vector<position> additionnal_manipulators = {
-	position(2, 1), position(-2, 1), position(0, -1), position(0, -2),
+	position(0, -1), position(2, 1), position(-2, 1), position(0, -2),
 	position(0, 2),  position(0, 3), position(0, -3), position(3, 1),
 	position(-3, 1), position(4, 0), position(-4, 0), position(4, 1),
 	position(-4, 1)};
 
 static const vector<vector<position>> manipulators_masks = {
 	{position(0, 1)}, {position(1,1)}, {position(-1, 1)}, {position(0,0)}, //those are the four default manipulators
+	{position(0,-1)},
 	{position (2,1), position(1,1), position(1,0)},
 	{position (-2,1), position(-1,1), position(-1,0)},
-	{position(0,-1)},
 	{position (0,-2)},
 	{position (0,2)},
 	{position (0,3)},
@@ -124,84 +124,12 @@ static bool PointInPolygon(position point, vector<position> polygon) {
 	return c;
 }
 
-mine_state::mine_state(mine_state *base_mine) {
-	robot = base_mine->robot;
-	obstacles = base_mine->obstacles;
-	mystere_boosters = base_mine->mystere_boosters;
-	drill_boosters = base_mine->drill_boosters;
-	fastwheels_boosters = base_mine->fastwheels_boosters;
-	manipulators_boosters = base_mine->manipulators_boosters;
-	max_size_x = base_mine->max_size_x;
-	max_size_y = base_mine->max_size_y;
-	non_validated_tiles = base_mine->non_validated_tiles;
-	relative_manipulators = base_mine->relative_manipulators;
-	owned_fastwheels_boosters =  base_mine->owned_fastwheels_boosters;
-	owned_drill_boosters =  base_mine->owned_drill_boosters;
-	owned_manipulators_boosters = base_mine->owned_manipulators_boosters;
-	time_step = base_mine->time_step;
-	distance_loss = base_mine->distance_loss;
-	current_orientation = base_mine->current_orientation;
-	board = (enum map_tile **)calloc(max_size_x, sizeof(enum map_tile *));
-	for (int i = 0; i < max_size_x; i++) {
-		board[i] = (enum map_tile *)calloc(max_size_y, sizeof(enum map_tile));
-		memcpy(board[i], base_mine->board[i],
-			   max_size_y * sizeof(enum map_tile));
+vector<Booster> mine_navigator::boosters_in_node_list(vector<Node> zone) {
+	vector<position> list_pos;
+	for (auto n : zone) {
+		list_pos.push_back(coord_map[n]);
 	}
-}
-
-bool mine_state::board_tile_has_booster(position tile) {
-	bool has_manip =
-		find(manipulators_boosters.begin(), manipulators_boosters.end(),
-			 tile) != manipulators_boosters.end();
-	// bool has_drill = find(drill_boosters.begin(), drill_boosters.end(), tile)
-	// != drill_boosters.end(); bool has_fast = find(fastwheels_boosters.begin(),
-	// fastwheels_boosters.end(), tile) != fastwheels_boosters.end(); bool
-	// has_mystere = find(mystere_boosters.begin(), mystere_boosters.end(), tile)
-	// != mystere_boosters.end();
-	return has_manip;
-}
-
-bool mine_state::board_tile_is_painted(position tile) {
-	return BOARD_TILE_IS_PAINTED(tile);
-}
-
-bool mine_state::board_tile_is_wall(position tile) {
-	return BOARD_TILE_IS_WALL(tile);
-}
-
-vector<position> mine_state::absolute_valid_manipulators() {
-	vector<position> result;
-	position multiplier(1,0);
-
-	switch (current_orientation) {
-		case NORTH:
-			multiplier = position(1,0);
-			break;
-		case SOUTH:
-			multiplier = position(-1,0);
-			break;
-		case WEST:
-			multiplier = position(0,1);
-			break;
-		case EAST:
-			multiplier = position(0,-1);
-			break;
-		default:
-			break;
-	}
-
-	for (int i = 0; i < relative_manipulators.size(); i++) {
-		bool should_apply = true;
-		for (auto mask:manipulators_masks[i]) {
-			if (BOARD_TILE_IS_WALL(mask * multiplier + robot)) {
-				should_apply = false;
-			}
-		}
-		if (should_apply) {
-			result.push_back(robot + relative_manipulators[i] * multiplier);
-		}
-	}
-	return result;
+	return mine->boosters_in_position_list(list_pos);
 }
 
 vector<vector<Node>> mine_navigator::node_from_coords(
@@ -218,6 +146,15 @@ vector<vector<Node>> mine_navigator::node_from_coords(
 	}
 	return result;
 }
+
+Node mine_navigator::node_from_coord(position pos) {
+	for (Graph::NodeIt it(graph); it != INVALID; ++it) {
+		if (coord_map[it] == pos)
+			return it;
+	}
+	return INVALID;
+}
+
 mine_navigator::mine_navigator(mine_state *base_mine)
 	: coord_map(graph),
 	  direction_map(graph),
@@ -294,32 +231,6 @@ vector<Node> mine_navigator::get_node_list() {
 	return result;
 }
 
-void mine_navigator::init_ordered_map() {
-	vector<Node> list_node = get_node_list();
-
-	for (int it = 0; it < (int)list_node.size(); it++) {
-		Bfs<Graph> dfs(graph);
-		vector<Node> result;
-		dfs.init();
-		dfs.addSource(list_node[it]);
-		int depth = 3000;
-		while (!dfs.emptyQueue() && depth--) {
-			Node v = dfs.processNextNode();
-			if (find(result.begin(), result.end(), v) == result.end())
-				result.push_back(v);
-		}
-		ordered_node_map[list_node[it]] = result;
-	}
-}
-
-vector<Node> mine_navigator::get_bfs_from_node(Node start, int depth) {
-	vector<Node> result;
-	result = ordered_node_map[start];
-	if (depth < (int)result.size())
-		result.erase(result.begin() + depth, result.end());
-	return result;
-}
-
 string mine_navigator::get_orientation(orientation source, orientation target) {
 	string result;
 	if (source == (orientation)(target + 2)) {
@@ -353,19 +264,6 @@ string mine_navigator::goto_node(Node orig, Node target) {
 	}
 	// get all directions of the path in the result
 	return result;
-}
-
-bool mine_state::is_point_valid(position point, vector<position> *mine_map) {
-	bool is_valid = false;
-	if (PointInPolygon(point, *mine_map)) {
-		is_valid = true;
-		for (auto it = obstacles.begin(); it != obstacles.end(); ++it) {
-			if (PointInPolygon(point, *it)) {
-				is_valid = false;
-			}
-		}
-	}
-	return is_valid;
 }
 
 mine_state::mine_state(string filename) {
@@ -448,6 +346,100 @@ mine_state::mine_state(string filename) {
 	distance_loss = 0;
 }
 
+
+mine_state::mine_state(mine_state *base_mine) {
+	robot = base_mine->robot;
+	obstacles = base_mine->obstacles;
+	mystere_boosters = base_mine->mystere_boosters;
+	drill_boosters = base_mine->drill_boosters;
+	fastwheels_boosters = base_mine->fastwheels_boosters;
+	manipulators_boosters = base_mine->manipulators_boosters;
+	max_size_x = base_mine->max_size_x;
+	max_size_y = base_mine->max_size_y;
+	non_validated_tiles = base_mine->non_validated_tiles;
+	relative_manipulators = base_mine->relative_manipulators;
+	owned_fastwheels_boosters =  base_mine->owned_fastwheels_boosters;
+	owned_drill_boosters =  base_mine->owned_drill_boosters;
+	owned_manipulators_boosters = base_mine->owned_manipulators_boosters;
+	time_step = base_mine->time_step;
+	distance_loss = base_mine->distance_loss;
+	current_orientation = base_mine->current_orientation;
+	board = (enum map_tile **)calloc(max_size_x, sizeof(enum map_tile *));
+	for (int i = 0; i < max_size_x; i++) {
+		board[i] = (enum map_tile *)calloc(max_size_y, sizeof(enum map_tile));
+		memcpy(board[i], base_mine->board[i],
+			   max_size_y * sizeof(enum map_tile));
+	}
+}
+
+bool mine_state::is_point_valid(position point, vector<position> *mine_map) {
+	bool is_valid = false;
+	if (PointInPolygon(point, *mine_map)) {
+		is_valid = true;
+		for (auto it = obstacles.begin(); it != obstacles.end(); ++it) {
+			if (PointInPolygon(point, *it)) {
+				is_valid = false;
+			}
+		}
+	}
+	return is_valid;
+}
+
+bool mine_state::board_tile_has_booster(position tile) {
+	bool has_manip =
+		find(manipulators_boosters.begin(), manipulators_boosters.end(),
+			 tile) != manipulators_boosters.end();
+	// bool has_drill = find(drill_boosters.begin(), drill_boosters.end(), tile)
+	// != drill_boosters.end(); bool has_fast = find(fastwheels_boosters.begin(),
+	// fastwheels_boosters.end(), tile) != fastwheels_boosters.end(); bool
+	// has_mystere = find(mystere_boosters.begin(), mystere_boosters.end(), tile)
+	// != mystere_boosters.end();
+	return has_manip;
+}
+
+bool mine_state::board_tile_is_painted(position tile) {
+	return BOARD_TILE_IS_PAINTED(tile);
+}
+
+bool mine_state::board_tile_is_wall(position tile) {
+	return BOARD_TILE_IS_WALL(tile);
+}
+
+vector<position> mine_state::absolute_valid_manipulators() {
+	vector<position> result;
+	position multiplier(1,0);
+
+	switch (current_orientation) {
+		case NORTH:
+			multiplier = position(1,0);
+			break;
+		case SOUTH:
+			multiplier = position(-1,0);
+			break;
+		case WEST:
+			multiplier = position(0,1);
+			break;
+		case EAST:
+			multiplier = position(0,-1);
+			break;
+		default:
+			break;
+	}
+
+	for (int i = 0; i < relative_manipulators.size(); i++) {
+		bool should_apply = true;
+		for (auto mask:manipulators_masks[i]) {
+			if (BOARD_TILE_IS_WALL(mask * multiplier + robot)) {
+				should_apply = false;
+			}
+		}
+		if (should_apply) {
+			result.push_back(robot + relative_manipulators[i] * multiplier);
+		}
+	}
+	return result;
+}
+
 mine_state::~mine_state() {
 	for (int i = 0; i < max_size_x; i++) {
 		free(board[i]);
@@ -496,6 +488,28 @@ string mine_state::strip(string commands) {
 		apply_command(string(1, *it));
 	}
 	return ret;
+}
+
+vector<Booster> mine_state::boosters_in_position_list(vector<position> list) {
+	vector<Booster> result;
+	for (auto pos:list) {
+		for (auto booster:manipulators_boosters)
+			if (pos == booster)
+				result.push_back(MANIPULATOR);
+
+		for (auto booster:fastwheels_boosters)
+			if (pos == booster)
+				result.push_back(FASTWHEEL);
+
+		for (auto booster:drill_boosters)
+			if (pos == booster)
+				result.push_back(DRILL);
+
+		for (auto booster:mystere_boosters)
+			if (pos == booster)
+				result.push_back(MYSTERE);
+	}
+	return result;
 }
 
 void mine_state::apply_command(string command) {

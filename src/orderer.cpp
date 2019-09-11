@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
 	int start_instance = 0;
 	int c;
 	int population = 2000;
-	int gInstance = 6;
+	int gInstance = 4;
 
 	while ((c = getopt(argc, argv, "p:a:hi:")) != -1) switch (c) {
 			case 'i':
@@ -64,25 +64,13 @@ int main(int argc, char** argv) {
 		vector<vector<Node>> previous_solution =
 			nav.node_from_coords(solution_pos);
 
-		vector<Node> centered_nodes;
-		for (auto zone : previous_solution) {
-			centered_nodes.push_back(zone[0]);
-		}
 		timer.tic();
 		vector<vector<position>> solution;
-		genetic_orderer orderer(nav, centered_nodes);
+		genetic_orderer orderer(nav, previous_solution);
 		cout << "instance " << gInstance
 			 << ": orderer generation = " << timer.toc() << " s" << endl;
 		timer.tic();
-		vector<Node> ordered_zones = orderer.solve(population);
-		vector<vector<Node>> ordered_solution;
-		cout << "instance " << gInstance << ": found solution = " << timer.toc()
-			 << " s" << endl;
-		for (auto zoneordre : ordered_zones) {
-			for (auto zone : previous_solution) {
-				if (zone[0] == zoneordre) ordered_solution.push_back(zone);
-			}
-		}
+		vector<vector<Node>> ordered_solution = orderer.solve(population);
 		solution = nav.list_of_coords_from_nodes(ordered_solution);
 
 		std::ofstream output_file;

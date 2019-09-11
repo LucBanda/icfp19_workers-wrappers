@@ -36,7 +36,7 @@ int main(int argc, char** argv) {
 	renderer* render;
 	int c;
 	bool load_result = false;
-	int instance = 30;
+	int instance = 4;
 	string exec;
 	string fileName = "";
 	int start_instance = 0;
@@ -80,6 +80,7 @@ int main(int argc, char** argv) {
 
 		status.mine = mine;
 		render->set_mine(mine);
+		render->set_nav(&navigator);
 
 		if (load_result) {
 			string execution = parse_result("./results/" + to_string(instance) + ".txt");

@@ -21,21 +21,26 @@ static void print_help() {
 		"	-i instance: instance of the problem to display \n"
 		"	-a from: do all problem from \"from\"\n"
 		"	-p population: population of each generation (default 2000)\n"
-		"	-s size: targeted size of each area\n");
+		"	-s size: targeted size of each area\n"
+		"	-v : enable verbose mode");
 }
 
 int main(int argc, char** argv) {
 	bool do_all = false;
 	int start_instance = 0;
 	int c;
-	int population =2000;
+	int population1 = 3000;
+	int population2 = 6000;
+	int population3 = 3000;
 	int gInstance = 4;
 	int region_size = 50;
 	bool perform_partitionning = false;
 	bool perform_ordering = false;
 	bool perform_optimization = false;
+	bool verbose = false;
+	int popu;
 
-	while ((c = getopt(argc, argv, "123s:p:a:hi:")) != -1) switch (c) {
+	while ((c = getopt(argc, argv, "123s:p:a:hi:v")) != -1) switch (c) {
 			case 'i':
 				gInstance = atoi(optarg);
 				break;
@@ -44,7 +49,10 @@ int main(int argc, char** argv) {
 				start_instance = atoi(optarg);
 				break;
 			case 'p':
-				population = atoi(optarg);
+				popu = atoi(optarg);
+				population1 = popu;
+				population2 = popu;
+				population3 = popu;
 				break;
 			case 's':
 				region_size = atoi(optarg);
@@ -53,10 +61,13 @@ int main(int argc, char** argv) {
 				perform_partitionning = true;
 				break;
 			case '2':
-				perform_partitionning = true;
+				perform_ordering = true;
 				break;
 			case '3':
 				perform_optimization = true;
+				break;
+			case 'v':
+				verbose = true;
 				break;
 			case 'h':
 			default:
@@ -87,7 +98,7 @@ int main(int argc, char** argv) {
 			// partition graph
 			global_graph_splitter splitter(&nav.graph);
 			splitter.target_nb_of_nodes_per_zone = region_size;
-			vector<vector<Node>> final_sol = splitter.solve(population);
+			vector<vector<Node>> final_sol = splitter.solve(population1);
 			ofstream output_file;
 			output_file.open("./results/split-" + to_string(gInstance) + ".txt",
 							std::ofstream::trunc);
@@ -110,26 +121,22 @@ int main(int argc, char** argv) {
 			vector<vector<Node>> previous_solution =
 				nav.node_from_coords(solution_pos);
 
-			vector<Node> centered_nodes;
+			/*vector<Node> centered_nodes;
 			for (auto zone : previous_solution) {
 				centered_nodes.push_back(zone[0]);
-			}
+			}*/
 			timer.tic();
 
 			cout << "************ ORDERING ****************" << endl;
-			genetic_orderer orderer(nav, centered_nodes);
+			genetic_orderer orderer(nav, previous_solution);
+			orderer.verbose = verbose;
 			cout << "instance " << gInstance
 				<< ": orderer generation = " << timer.toc() << " s" << endl;
 			timer.tic();
-			vector<Node> ordered_zones = orderer.solve(population);
-			vector<vector<Node>> ordered_solution;
-			cout << "instance " << gInstance << ": found solution = " << timer.toc()
-				<< " s" << endl;
-			for (auto zoneordre : ordered_zones) {
-				for (auto zone : previous_solution) {
-					if (zone[0] == zoneordre) ordered_solution.push_back(zone);
-				}
-			}
+			vector<vector<Node>> ordered_solution = orderer.solve(population2);
+
+			cout << "instance " << gInstance
+				<< ": order found = " << timer.toc() << " s" << endl;
 			vector<vector<position>> solution = nav.list_of_coords_from_nodes(ordered_solution);
 			ofstream output_file;
 			output_file.open("./results/order-" + to_string(gInstance) + ".txt",
@@ -155,7 +162,7 @@ int main(int argc, char** argv) {
 			for (int i = 0; i < zone_list.size(); i++) {
 				genetic_optimizer optimizer(gInstance, &nav, zone_list, i,
 											start_of_zone, solution_str);
-				pair<string, Node> pair_sol = optimizer.solve(population);
+				pair<string, Node> pair_sol = optimizer.solve(population3);
 				solution_str = solution_str + pair_sol.first;
 				start_of_zone = pair_sol.second;
 				std::ofstream output_file;

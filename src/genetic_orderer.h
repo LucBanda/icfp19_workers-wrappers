@@ -34,18 +34,22 @@ class genetic_orderer {
    public:
 	SmartGraph graph;
 	mine_navigator& nav;
-	vector<Node> zone_centers;
-	SmartGraph::NodeMap<Node> submine_to_mine_nodes;
+	vector<vector<Node>> zones;
+
+	SmartGraph::NodeMap<vector<Node>> submine_to_mine_nodes;
+	SmartGraph::NodeMap<vector<Booster>> boosters_map;
 	SmartGraph::EdgeMap<int> cost;
 	vector<SmartGraph::Node> node_list;
-	Node start_zone;
+	vector<Node> start_zone;
 	SmartGraph::Node starting_node;
+	bool verbose;
 
-	genetic_orderer(mine_navigator& arg_nav, vector<Node>& arg_zone_centers);
+	genetic_orderer(mine_navigator& arg_nav, vector<vector<Node>> &arg_zones);
 	~genetic_orderer();
-	vector<Node> solve(int population_size);
+	vector<vector<Node>> solve(int population_size);
 
    private:
+	pair<vector<SmartGraph::Node>, int> execute_sequence(const genetic_orderer::MySolution &p);
 	bool eval_solution(const genetic_orderer::MySolution& p,
 					   genetic_orderer::MyMiddleCost& c);
 	void init_genes(genetic_orderer::MySolution& p,
@@ -62,7 +66,7 @@ class genetic_orderer {
 		int generation_number,
 		const EA::GenerationType<genetic_orderer::MySolution,
 								 genetic_orderer::MyMiddleCost>&
-			last_generation,
+									last_generation,
 		const MySolution& best_genes);
 	void SO_report_generation_empty(
 		int generation_number,
