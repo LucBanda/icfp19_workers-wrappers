@@ -268,9 +268,6 @@ vector<vector<Node>> global_graph_splitter::solve(int population) {
 		} else
 			cout << "iterative pass in " << timer.toc() << endl;
 	}
-	cout << "sizes = ";
-	for (auto zone : final_sol) cout << zone.size() << " ";
-	cout << endl;
 
 	return final_sol;
 }

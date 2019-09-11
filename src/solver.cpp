@@ -15,10 +15,12 @@
 #include "sys/time.h"
 
 static const vector<tuple<int, int, int, int, int>> testbench_table = {
-	{2, 50, 3000, 6000, 3000},
+	{2, 50, 3000, 5000, 3000},
+	{3, 50, 3000, 5000, 3000},
 	{10, 50, 3000, 5000, 3000},
-	{57, 100, 3000, 6000, 3000},
-	{150, 150, 3000, 6000, 3000},
+	{57, 100, 3000, 5000, 3000},
+	{150, 150, 3000, 5000, 3000},
+	{201, 200, 3000, 5000, 3000},
 };
 
 static void print_help() {
@@ -100,14 +102,23 @@ int main(int argc, char** argv) {
 
 	if (testbench) {
 		problems.clear();
+		perform_partitionning = true;
+		perform_ordering = true;
+		perform_optimization = true;
 		for (auto it:testbench_table) {
 			problems.push_back(it);
 		}
+		std::ofstream output_file;
+		output_file.open("./testbench/" + testbench_identifier + ".txt",
+						std::ofstream::app);
+		output_file << "----------------------------------------------------------" << endl;
 	}
 	EA::Chronometer timer;
 
 	for (auto problem:problems) {
 		tie(gInstance, region_size, population1, population2, population3) = problem;
+		EA::Chronometer main_timer;
+		main_timer.tic();
 		ostringstream padded_filename;
 		if (gInstance == -1)
 			padded_filename << "./part-1-examples/example-01.desc";
@@ -133,13 +144,16 @@ int main(int argc, char** argv) {
 			vector<vector<position>> solution =
 				nav.list_of_coords_from_nodes(final_sol);
 
+			cout << "sizes = ";
+			for (auto zone : final_sol) cout << zone.size() << " ";
+			cout << endl;
+
 			for (auto zone : solution) {
 				for (auto point : zone)
 					output_file << "(" << point.real() << "," << point.imag()
 								<< ")/";
 				output_file << endl;
 			}
-
 			output_file.close();
 		}
 		if (perform_ordering) {
@@ -148,14 +162,10 @@ int main(int argc, char** argv) {
 			vector<vector<Node>> previous_solution =
 				nav.node_from_coords(solution_pos);
 
-			timer.tic();
-
 			cout << "************ ORDERING ****************" << endl;
+			timer.tic();
 			genetic_orderer orderer(nav, previous_solution);
 			orderer.verbose = verbose;
-			cout << "instance " << gInstance
-				<< ": orderer generation = " << timer.toc() << " s" << endl;
-			timer.tic();
 			vector<vector<Node>> ordered_solution = orderer.solve(population2);
 
 			cout << "instance " << gInstance
@@ -165,6 +175,9 @@ int main(int argc, char** argv) {
 			output_file.open("./results/order-" + to_string(gInstance) + ".txt",
 							std::ofstream::trunc);
 
+			cout << "sizes = ";
+			for (auto zone : solution) cout << zone.size() << " ";
+			cout << endl;
 			for (auto zone : solution) {
 				for (auto point : zone)
 					output_file << "(" << point.real() << "," << point.imag()
@@ -198,9 +211,9 @@ int main(int argc, char** argv) {
 			std::ofstream output_file;
 			output_file.open("./testbench/" + testbench_identifier + ".txt",
 							std::ofstream::app);
-			output_file << solution_str << endl;
+			output_file << "instance " << gInstance << ", time = " << main_timer.toc() << ", total size = " << solution_str.length() << "  " << solution_str << endl;
+			//output_file << solution_str << endl;
 			output_file.close();
-			cout << "instance " << gInstance << "/" <<  " total size = " << solution_str.length() << endl;
 		}
 		cout << endl;
 	}
