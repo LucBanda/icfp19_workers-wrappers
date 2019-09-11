@@ -37,13 +37,11 @@ vector<vector<Node>> genetic_graph_splitter::partition_graph_with_split(
 		auto node = patch.first;
 		if (filter[node] == true) {
 			vector<Node> result;
-			result.clear();
 			FilterNodes<Graph> subgraph(*graph, filter);
 			Bfs<lSubGraph> bfs(subgraph);
 			bfs.init();
 			bfs.addSource(node);
 			int cnt = 0;
-			// bfs.addSource(list_node[it]);
 			while (!bfs.emptyQueue() && depth > 0) {
 				FilterNodes<Graph>::Node n = bfs.processNextNode();
 				if (filter[n] == true) {

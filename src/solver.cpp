@@ -39,14 +39,14 @@ int main(int argc, char** argv) {
 	int start_instance = 0;
 	int c;
 	int population1 = 3000;
-	int population2 = 5000;
+	int population2 = 6000;
 	int population3 = 3000;
-	int gInstance = 4;
+	int gInstance = 150;
 	int region_size = 50;
 	bool perform_partitionning = false;
 	bool perform_ordering = false;
 	bool perform_optimization = false;
-	bool verbose = false;
+	bool verbose = true;
 	int popu;
 	bool testbench = false;
 	string testbench_identifier = "";

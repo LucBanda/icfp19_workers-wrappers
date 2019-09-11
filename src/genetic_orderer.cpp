@@ -125,34 +125,41 @@ genetic_orderer::MySolution genetic_orderer::mutate(
 	const genetic_orderer::MySolution& X_base,
 	const std::function<double(void)>& rnd01, double shrink_scale) {
 	MySolution X_new;
-	int swap1 = 0;
-	int swap2 = 0;
-	int minswap, maxswap;
-	double action = rnd01();
-	while (swap1 == swap2) {
-		swap1 = rnd01() * X_base.split.size();
-		swap2 = rnd01() * X_base.split.size();
-	}
+	X_new.split = X_base.split;
+	int nb_of_mutations = max(1., 100. * rnd01() * shrink_scale);
 
-	minswap = min(swap1, swap2);
-	maxswap = max(swap1, swap2);
+	for (int i = 0; i < nb_of_mutations; i++) {
+		vector<SmartGraph::Node> new_split;
+		int swap1 = 0;
+		int swap2 = 0;
+		int minswap, maxswap;
+		double action = rnd01();
+		while (swap1 == swap2) {
+			swap1 = rnd01() * X_new.split.size();
+			swap2 = rnd01() * X_new.split.size();
+		}
 
-	if (action < .5) {
-		// this reverse the sequence between minswap and maxswap
-		int i;
-		for (i = 0; i < minswap; i++) {
-			X_new.split.push_back(X_base.split[i]);
+		minswap = min(swap1, swap2);
+		maxswap = max(swap1, swap2);
+
+		if (action < 2) {
+			// this reverse the sequence between minswap and maxswap
+			int i;
+			for (i = 0; i < minswap; i++) {
+				new_split.push_back(X_new.split[i]);
+			}
+			for (i = maxswap - 1; i >= minswap; i--) {
+				new_split.push_back(X_new.split[i]);
+			}
+			for (i = maxswap; i < X_new.split.size(); i++) {
+				new_split.push_back(X_new.split[i]);
+			}
+			X_new.split = new_split;
+		} else {
+			// this swaps swap1 and swap2
+			iter_swap(X_new.split.begin() + swap1, X_new.split.begin() + swap2);
 		}
-		for (i = maxswap - 1; i >= minswap; i--) {
-			X_new.split.push_back(X_base.split[i]);
-		}
-		for (i = maxswap; i < X_base.split.size(); i++) {
-			X_new.split.push_back(X_base.split[i]);
-		}
-	} else {
-		// this swaps swap1 and swap2
-		X_new.split = X_base.split;
-		iter_swap(X_new.split.begin() + swap1, X_new.split.begin() + swap2);
+
 	}
 
 	return X_new;
@@ -301,7 +308,7 @@ vector<vector<Node>> genetic_orderer::solve(int population_size) {
 	GA_Type ga_obj;
 	ga_obj.problem_mode = EA::GA_MODE::SOGA;
 	ga_obj.multi_threading = true;
-	ga_obj.dynamic_threading = false;
+	ga_obj.dynamic_threading = true;
 	ga_obj.verbose = false;
 	ga_obj.population = population_size;
 	ga_obj.generation_max = 6000;
@@ -323,7 +330,7 @@ vector<vector<Node>> genetic_orderer::solve(int population_size) {
 	ga_obj.mutation_rate = 0.3;
 	ga_obj.best_stall_max = 30;
 	ga_obj.average_stall_max = 10;
-	ga_obj.elite_count = 100;
+	ga_obj.elite_count = 200;
 
 	ga_obj.solve();
 
