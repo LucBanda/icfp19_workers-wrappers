@@ -14,6 +14,13 @@
 #include "renderer.h"
 #include "sys/time.h"
 
+static const vector<tuple<int, int, int, int, int>> testbench_table = {
+	{2, 50, 3000, 6000, 3000},
+	{10, 50, 3000, 5000, 3000},
+	{57, 100, 3000, 6000, 3000},
+	{150, 150, 3000, 6000, 3000},
+};
+
 static void print_help() {
 	printf(
 		"options: \n"
@@ -39,48 +46,68 @@ int main(int argc, char** argv) {
 	bool perform_optimization = false;
 	bool verbose = false;
 	int popu;
+	bool testbench = false;
+	string testbench_identifier = "";
 
-	while ((c = getopt(argc, argv, "123s:p:a:hi:v")) != -1) switch (c) {
-			case 'i':
-				gInstance = atoi(optarg);
-				break;
-			case 'a':
-				do_all = true;
-				start_instance = atoi(optarg);
-				break;
-			case 'p':
-				popu = atoi(optarg);
-				population1 = popu;
-				population2 = popu;
-				population3 = popu;
-				break;
-			case 's':
-				region_size = atoi(optarg);
-				break;
-			case '1':
-				perform_partitionning = true;
-				break;
-			case '2':
-				perform_ordering = true;
-				break;
-			case '3':
-				perform_optimization = true;
-				break;
-			case 'v':
-				verbose = true;
-				break;
-			case 'h':
-			default:
-				print_help();
-				exit(0);
+	while ((c = getopt(argc, argv, "t:123s:p:a:hi:v")) != -1) switch (c) {
+		case 't':
+			testbench = true;
+			testbench_identifier = optarg;
+			break;
+		case 'i':
+			gInstance = atoi(optarg);
+			break;
+		case 'a':
+			do_all = true;
+			start_instance = atoi(optarg);
+			break;
+		case 'p':
+			popu = atoi(optarg);
+			population1 = popu;
+			population2 = popu;
+			population3 = popu;
+			break;
+		case 's':
+			region_size = atoi(optarg);
+			break;
+		case '1':
+			perform_partitionning = true;
+			break;
+		case '2':
+			perform_ordering = true;
+			break;
+		case '3':
+			perform_optimization = true;
+			break;
+		case 'v':
+			verbose = true;
+			break;
+		case 'h':
+		default:
+			print_help();
+			exit(0);
+	}
+	//parameters are : <0> = instance; <1> size_of_region; <2> population1; <3> population2; <4> population3
+	vector<tuple<int, int, int, int, int>> problems;
+	if (do_all) {
+		for (int i = start_instance; i < 301; i++) {
+			population1 = 3000;
+			population2 = 6000;
+			population3 = 3000;
+			problems.push_back(make_tuple(i, region_size, population1, population2, population3));
 		}
+	}
 
+	if (testbench) {
+		problems.clear();
+		for (auto it:testbench_table) {
+			problems.push_back(it);
+		}
+	}
 	EA::Chronometer timer;
 
-	for (int i = start_instance; i < 301; i++) {
-		if (do_all) {
-			gInstance = i;
-		}
+	for (auto problem:problems) {
+		tie(gInstance, region_size, population1, population2, population3) = problem;
 		ostringstream padded_filename;
 		if (gInstance == -1)
 			padded_filename << "./part-1-examples/example-01.desc";
@@ -121,10 +148,6 @@ int main(int argc, char** argv) {
 			vector<vector<Node>> previous_solution =
 				nav.node_from_coords(solution_pos);
 
-			/*vector<Node> centered_nodes;
-			for (auto zone : previous_solution) {
-				centered_nodes.push_back(zone[0]);
-			}*/
 			timer.tic();
 
 			cout << "************ ORDERING ****************" << endl;
@@ -172,11 +195,14 @@ int main(int argc, char** argv) {
 				output_file.close();
 				cout << "instance " << gInstance << ", " << i+1 << "/" << zone_list.size() << ", total size = " << solution_str.length() << endl;
 			}
+			std::ofstream output_file;
+			output_file.open("./testbench/" + testbench_identifier + ".txt",
+							std::ofstream::app);
+			output_file << solution_str << endl;
+			output_file.close();
+			cout << "instance " << gInstance << "/" <<  " total size = " << solution_str.length() << endl;
 		}
-
-		if (!do_all) {
-			return 0;
-		}
+		cout << endl;
 	}
 
 	return 0;
