@@ -61,7 +61,7 @@ int main(int argc, char** argv) {
 		string solution;
 		Node start_of_zone = nav.initialNode;
 		for (int i = 0; i < zone_list.size(); i++) {
-			genetic_optimizer optimizer(gInstance, &nav, zone_list, i,
+			genetic_optimizer optimizer(gInstance, &nav, nav.mine, zone_list, i,
 										start_of_zone, solution);
 			pair<string, Node> pair_sol = optimizer.solve(population);
 			solution = solution + pair_sol.first;

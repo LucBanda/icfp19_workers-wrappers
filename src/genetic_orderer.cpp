@@ -13,6 +13,8 @@
 #include "renderer.h"
 #include "sys/time.h"
 #include <set>
+#include "agent.h"
+#include "genetic_optimizer.h"
 
 using std::cout;
 using std::endl;
@@ -28,7 +30,7 @@ void genetic_orderer::init_genes(MySolution& p,
 	srand((time.tv_sec) + (time.tv_usec));
 	vector<SmartGraph::Node> nodes = node_list;
 	random_shuffle(nodes.begin(), nodes.end(), randomfunc);
-	p.split.insert(p.split.end(), nodes.begin(), nodes.end());
+	p.split = nodes;
 }
 
 pair<vector<SmartGraph::Node>, int> genetic_orderer::execute_sequence(const genetic_orderer::MySolution &p) {
@@ -38,13 +40,12 @@ pair<vector<SmartGraph::Node>, int> genetic_orderer::execute_sequence(const gene
 	SmartGraph::Node orig = starting_node;
 	SmartGraph::NodeMap<bool> filled(graph, false);
 	SmartGraph::EdgeMap<int> length(graph, 1);
-
 	SmartGraph::Node dest;
 	int manip_boosters_catches = 0;
 	int fastwheel_boosters_credit = 0;
 
 	//start with start node
-	result_score = start_zone.size(); //get its cost
+	result_score = 0;
 	filled[starting_node] = true;
 	for (SmartGraph::IncEdgeIt e(graph, starting_node); e != INVALID; ++e) {
 		length[e] = cost[e]; // new length if going through a node is approximated to the distance of the centers
@@ -83,7 +84,7 @@ pair<vector<SmartGraph::Node>, int> genetic_orderer::execute_sequence(const gene
 				path_cost += length[edge];
 			}
 			if (!filled[zone]) {
-				zone_cost += submine_to_mine_nodes[zone].size() / (1. + manip_boosters_catches) / 4;
+				zone_cost += node_cost_per_booster_cnt[zone][manip_boosters_catches];
 				result_order.push_back(zone);
 				filled[zone] = true;
 				// from now on, dest is considered validated as well as non validated nodes on the path
@@ -107,6 +108,7 @@ pair<vector<SmartGraph::Node>, int> genetic_orderer::execute_sequence(const gene
 	return make_pair(result_order, result_score);
 
 }
+
 // evaluate the solution by walking through edges and adding distances.
 // a factor should be applied to following sequences if a booster is in a zone
 // all following distances are multiplied by 0.9 for a manipulator
@@ -205,7 +207,6 @@ genetic_orderer::MySolution genetic_orderer::crossover(
 		if (i == 0) break;
 		new_nodes.push_back(node);
 	}
-
 	X_new.split = new_nodes;
 
 	return X_new;
@@ -229,13 +230,16 @@ void genetic_orderer::SO_report_generation(
 		 << ", "
 		 //<< "genes size=" << best_genes.to_string(this) << ", "
 		 << "Exe_time=" << last_generation.exe_time << endl;
+
 }
 
 genetic_orderer::genetic_orderer(mine_navigator& arg_nav,
 								 vector<vector<Node>>& zones)
-	: nav(arg_nav), submine_to_mine_nodes(graph), boosters_map(graph), cost(graph) {
+	: nav(arg_nav), submine_to_mine_nodes(graph), boosters_map(graph), cost(graph), node_cost_per_booster_cnt(graph)  {
 
-
+	struct timeval time;
+	gettimeofday(&time, NULL);
+	srand((time.tv_sec) + (time.tv_usec));
 	//make the map from node of original graph to zone
 	Graph::NodeMap<vector<Node>> node_to_zone_map(nav.graph);
 	for (auto zone:zones) {
@@ -243,15 +247,14 @@ genetic_orderer::genetic_orderer(mine_navigator& arg_nav,
 			node_to_zone_map[node] = zone;
 		}
 	}
-
 	// calculate the starting zone by applying dijstra between center nodes and
 	// starting point
+	vector<Node> start_zone;
 	for (auto zone : zones) {
 		if (find(zone.begin(), zone.end(), nav.robot_pos) != zone.end()) {
 			start_zone = zone;
 		}
 	}
-
 
 	// create graph of zones
 	for (auto zone : zones) {
@@ -262,7 +265,6 @@ genetic_orderer::genetic_orderer(mine_navigator& arg_nav,
 		}
 		else
 			starting_node = u;
-		boosters_map[u] = arg_nav.boosters_in_node_list(zone);
 	}
 
 	// calculate adjacent zones with bfs from the center
@@ -293,6 +295,28 @@ genetic_orderer::genetic_orderer(mine_navigator& arg_nav,
 			}
 		}
 	}
+
+	init_node_cost_map();
+}
+
+
+void genetic_orderer::init_node_cost_map() {
+	for (SmartGraph::NodeIt orig(graph); orig != INVALID; ++orig) {
+		for(int i = 0; i < nav.mine->manipulators_boosters.size(); i++) {
+			mine_state fake_mine(nav.mine);
+			fake_mine.robot = nav.coord_map[submine_to_mine_nodes[orig][0]];
+			fake_mine.set_current_nb_of_manipulators(i);
+			vector<vector<Node>> fake_list_of_nodes;
+			fake_list_of_nodes.push_back(submine_to_mine_nodes[orig]);
+			vector<vector<position>> fake_list_of_position = nav.list_of_coords_from_nodes(fake_list_of_nodes);
+			genetic_optimizer mine_cost_optim(0, &nav, &fake_mine,
+					 fake_list_of_position, 0,
+					 	submine_to_mine_nodes[orig][0], "");
+			mine_cost_optim.solve(100, 1);
+			node_cost_per_booster_cnt[orig].push_back(mine_cost_optim.score);
+		}
+	}
+
 }
 
 genetic_orderer::~genetic_orderer() {}
@@ -324,7 +348,7 @@ vector<vector<Node>> genetic_orderer::solve(int population_size) {
 			&genetic_orderer::SO_report_generation, this, _1, _2, _3);
 	} else {
 		ga_obj.SO_report_generation = std::bind(
-			&genetic_orderer::SO_report_generation_empty, this, _1, _2, _3);
+			&genetic_orderer::SO_report_generation, this, _1, _2, _3);
 	}
 	ga_obj.crossover_fraction = 0.7;
 	ga_obj.mutation_rate = 0.3;

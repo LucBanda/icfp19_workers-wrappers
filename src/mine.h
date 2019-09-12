@@ -73,6 +73,7 @@ class mine_state {
 	bool board_tile_has_booster(position tile);
 	vector<position> absolute_valid_manipulators();
 	vector<Booster> boosters_in_position_list(vector<position> list);
+	void set_current_nb_of_manipulators(int nb);
 
 	int non_validated_tiles;
 	enum map_tile **board;

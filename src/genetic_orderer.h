@@ -7,8 +7,6 @@
 #include "agent.h"
 #include "openga.hpp"
 
-#define MAX_NUMBER_OF_THRUSTS 5
-
 class genetic_orderer {
 	struct MySolution {
 		vector<SmartGraph::Node> split;
@@ -35,17 +33,20 @@ class genetic_orderer {
 	SmartGraph graph;
 	mine_navigator& nav;
 	vector<vector<Node>> zones;
+	string output_filename;
 
 	SmartGraph::NodeMap<vector<Node>> submine_to_mine_nodes;
 	SmartGraph::NodeMap<vector<Booster>> boosters_map;
+	//SmartGraph::NodeMap<vector<Booster>> boosters_map;
 	SmartGraph::EdgeMap<int> cost;
 	vector<SmartGraph::Node> node_list;
-	vector<Node> start_zone;
+	SmartGraph::NodeMap<vector<int>> node_cost_per_booster_cnt;
 	SmartGraph::Node starting_node;
 	bool verbose;
 
 	genetic_orderer(mine_navigator& arg_nav, vector<vector<Node>> &arg_zones);
 	~genetic_orderer();
+	void init_node_cost_map();
 	vector<vector<Node>> solve(int population_size);
 
    private:

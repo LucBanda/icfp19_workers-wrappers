@@ -25,12 +25,13 @@ class genetic_optimizer {
 	vector<vector<Node>> zones;
 	int zone_id;
 	Node start;
+	int score;
 
-	genetic_optimizer(int arg_instance, mine_navigator* arg_nav,
+	genetic_optimizer(int arg_instance, mine_navigator* arg_nav, mine_state *mine,
 					  vector<vector<position>>& arg_zones, int arg_zone_id,
 					  Node start_node, string start_string);
 	~genetic_optimizer();
-	pair<string, Node> solve(int population_size);
+	pair<string, Node> solve(int population_size, int generation_max = 5000);
 
    private:
 	bool eval_solution(const MySolution& p, MyMiddleCost& c);

@@ -178,11 +178,11 @@ void genetic_optimizer::SO_report_generation(
 		 << "Exe_time=" << last_generation.exe_time << endl;
 }
 
-genetic_optimizer::genetic_optimizer(int arg_instance, mine_navigator* arg_nav,
+genetic_optimizer::genetic_optimizer(int arg_instance, mine_navigator* arg_nav, mine_state *mine,
 									 vector<vector<position>>& arg_zones,
 									 int arg_zone_id, Node start_node,
 									 string start_string)
-	: base_mine(arg_nav->mine) {
+	: base_mine(mine) {
 	instance = arg_instance;
 	start = start_node;
 	navigator = arg_nav;
@@ -192,7 +192,7 @@ genetic_optimizer::genetic_optimizer(int arg_instance, mine_navigator* arg_nav,
 }
 genetic_optimizer::~genetic_optimizer() {}
 
-pair<string, Node> genetic_optimizer::solve(int population_size) {
+pair<string, Node> genetic_optimizer::solve(int population_size, int generation_max) {
 	using namespace std::placeholders;
 
 	EA::Chronometer timer;
@@ -205,7 +205,7 @@ pair<string, Node> genetic_optimizer::solve(int population_size) {
 	ga_obj.dynamic_threading = false;
 	ga_obj.verbose = false;
 	ga_obj.population = population_size;
-	ga_obj.generation_max = 5000;
+	ga_obj.generation_max = generation_max;
 	ga_obj.calculate_SO_total_fitness =
 		std::bind(&genetic_optimizer::calculate_SO_total_fitness, this, _1);
 	ga_obj.init_genes = std::bind(&genetic_optimizer::init_genes, this, _1, _2);
@@ -223,7 +223,7 @@ pair<string, Node> genetic_optimizer::solve(int population_size) {
 	ga_obj.elite_count = 50;
 
 	ga_obj.solve();
-
+	score = ga_obj.last_generation.best_total_cost;
 	return ga_obj.last_generation
 		.chromosomes[ga_obj.last_generation.best_chromosome_index]
 		.genes.to_string(this);

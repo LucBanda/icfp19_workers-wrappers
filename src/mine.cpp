@@ -340,7 +340,10 @@ mine_state::mine_state(string filename) {
 	current_orientation = EAST;
 	vector<position> absolute_manip = absolute_valid_manipulators();
 	for (auto it:absolute_manip) {
-		BOARD_TILE(it) = PAINTED;
+		if (BOARD_TILE_IS_EMPTY(it)) {
+			BOARD_TILE(it) = PAINTED;
+			non_validated_tiles--;
+		}
 	}
 	owned_fastwheels_boosters = 0;
 	owned_drill_boosters = 0;
@@ -386,6 +389,17 @@ bool mine_state::is_point_valid(position point, vector<position> *mine_map) {
 		}
 	}
 	return is_valid;
+}
+
+void mine_state::set_current_nb_of_manipulators(int nb) {
+	relative_manipulators.clear();
+	relative_manipulators.push_back(position(0, 1));
+	relative_manipulators.push_back(position(1, 1));
+	relative_manipulators.push_back(position(-1, 1));
+	relative_manipulators.push_back(position(0, 0));
+	for (int i = 0; i < nb; i++) {
+		relative_manipulators.push_back(additionnal_manipulators[i]);
+	}
 }
 
 bool mine_state::board_tile_has_booster(position tile) {
@@ -564,6 +578,7 @@ void mine_state::apply_command(string command) {
 			if (BOARD_TILE(it) != PAINTED) {
 				BOARD_TILE(it) = PAINTED;
 				validated = true;
+				non_validated_tiles--;
 			}
 		}
 		if (validated == false && !invalid_move) {

@@ -15,14 +15,14 @@
 #include "sys/time.h"
 
 static const vector<tuple<int, int, int, int, int>> testbench_table = {
-	{2, 50, 3000, 5000, 3000},
-	{3, 30, 3000, 5000, 3000},
-	{4, 30, 3000, 5000, 3000},
-	{10, 50, 3000, 5000, 3000},
-	{35, 50, 3000, 5000, 3000},
-	{57, 100, 3000, 5000, 3000},
-	{150, 150, 3000, 5000, 3000},
-	{201, 200, 3000, 5000, 3000},
+	{2, 50, 3000, 2000, 3000},
+	{3, 30, 3000, 2000, 3000},
+	{4, 30, 3000, 2000, 3000},
+	{10, 50, 3000, 2000, 3000},
+	{35, 50, 3000, 2000, 3000},
+	{57, 100, 3000, 2000, 3000},
+	{150, 150, 3000, 2000, 3000},
+	{201, 200, 3000, 2000, 3000},
 };
 
 static void print_help() {
@@ -41,7 +41,7 @@ int main(int argc, char** argv) {
 	int start_instance = 0;
 	int c;
 	int population1 = 3000;
-	int population2 = 5000;
+	int population2 = 2000;
 	int population3 = 3000;
 	int gInstance = 150;
 	int region_size = 50;
@@ -198,7 +198,7 @@ int main(int argc, char** argv) {
 			string solution_str = "";
 			Node start_of_zone = nav.initialNode;
 			for (int i = 0; i < zone_list.size(); i++) {
-				genetic_optimizer optimizer(gInstance, &nav, zone_list, i,
+				genetic_optimizer optimizer(gInstance, &nav, nav.mine, zone_list, i,
 											start_of_zone, solution_str);
 				pair<string, Node> pair_sol = optimizer.solve(population3);
 				solution_str = solution_str + pair_sol.first;
