@@ -83,7 +83,7 @@ pair<vector<SmartGraph::Node>, int> genetic_orderer::execute_sequence(const gene
 				path_cost += length[edge];
 			}
 			if (!filled[zone]) {
-				zone_cost += submine_to_mine_nodes[zone].size() / (1. + manip_boosters_catches / 2.);
+				zone_cost += submine_to_mine_nodes[zone].size() / (1. + manip_boosters_catches) / 4;
 				result_order.push_back(zone);
 				filled[zone] = true;
 				// from now on, dest is considered validated as well as non validated nodes on the path
@@ -126,7 +126,7 @@ genetic_orderer::MySolution genetic_orderer::mutate(
 	const std::function<double(void)>& rnd01, double shrink_scale) {
 	MySolution X_new;
 	X_new.split = X_base.split;
-	int nb_of_mutations = max(1., 100. * rnd01() * shrink_scale);
+	int nb_of_mutations = max(1., 10. * rnd01() * shrink_scale);
 
 	for (int i = 0; i < nb_of_mutations; i++) {
 		vector<SmartGraph::Node> new_split;

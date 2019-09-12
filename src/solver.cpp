@@ -16,8 +16,10 @@
 
 static const vector<tuple<int, int, int, int, int>> testbench_table = {
 	{2, 50, 3000, 5000, 3000},
-	{3, 50, 3000, 5000, 3000},
+	{3, 30, 3000, 5000, 3000},
+	{4, 30, 3000, 5000, 3000},
 	{10, 50, 3000, 5000, 3000},
+	{35, 50, 3000, 5000, 3000},
 	{57, 100, 3000, 5000, 3000},
 	{150, 150, 3000, 5000, 3000},
 	{201, 200, 3000, 5000, 3000},
@@ -39,7 +41,7 @@ int main(int argc, char** argv) {
 	int start_instance = 0;
 	int c;
 	int population1 = 3000;
-	int population2 = 6000;
+	int population2 = 5000;
 	int population3 = 3000;
 	int gInstance = 150;
 	int region_size = 50;
@@ -94,7 +96,7 @@ int main(int argc, char** argv) {
 	if (do_all) {
 		for (int i = start_instance; i < 301; i++) {
 			population1 = 3000;
-			population2 = 6000;
+			population2 = 5000;
 			population3 = 3000;
 			problems.push_back(make_tuple(i, region_size, population1, population2, population3));
 		}

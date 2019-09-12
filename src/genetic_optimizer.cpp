@@ -64,7 +64,7 @@ MySolution genetic_optimizer::mutate(const MySolution& X_base,
 									 const std::function<double(void)>& rnd01,
 									 double shrink_scale) {
 	MySolution X_new = X_base;
-	int nb_of_mutations = max(1, (int)(50. * rnd01() * shrink_scale));
+	int nb_of_mutations = max(1, (int)(10. * rnd01() * shrink_scale));
 
 	for (int i = 0; i < nb_of_mutations; i++) {
 		int swap1 = 0;
@@ -79,7 +79,7 @@ MySolution genetic_optimizer::mutate(const MySolution& X_base,
 		minswap = min(swap1, swap2);
 		maxswap = max(swap1, swap2);
 
-		if (action < 2) {
+		if (action < 0.5) {
 			MySolution X_input = X_new;
 			X_new.node_list.clear();
 			int i;
@@ -92,9 +92,6 @@ MySolution genetic_optimizer::mutate(const MySolution& X_base,
 			for (i = maxswap; i < X_input.node_list.size(); i++) {
 				X_new.node_list.push_back(X_input.node_list[i]);
 			}
-		} else if (action < .75) {
-			iter_swap(X_new.node_list.begin() + swap1,
-					  X_new.node_list.begin() + swap2);
 		} else {
 			pair<Node, orientation> node;
 			node = X_new.node_list[swap1];
