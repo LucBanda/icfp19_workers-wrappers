@@ -15,14 +15,14 @@
 #include "sys/time.h"
 
 static const vector<tuple<int, int, int, int, int>> testbench_table = {
-	{2, 50, 3000, 6000, 3000},
-	{3, 30, 3000, 6000, 3000},
-	{4, 30, 3000, 6000, 3000},
-	{10, 30, 3000, 6000, 3000},
-	{35, 30, 3000, 6000, 3000},
-	{57, 50, 3000, 6000, 3000},
-	{150, 100, 3000, 6000, 3000},
-	{201, 150, 3000, 6000, 3000},
+	{2, 50, 3000, 5000, 3000},
+	{3, 30, 3000, 5000, 3000},
+	{4, 30, 3000, 5000, 3000},
+	{10, 30, 3000, 5000, 3000},
+	{35, 30, 3000, 5000, 3000},
+	{57, 100, 3000, 5000, 3000},
+	{150, 150, 3000, 5000, 3000},
+	{201, 150, 3000, 5000, 3000},
 };
 
 static void print_help() {
@@ -41,7 +41,7 @@ int main(int argc, char** argv) {
 	int start_instance = 0;
 	int c;
 	int population1 = 3000;
-	int population2 = 1000;
+	int population2 = 5000;
 	int population3 = 3000;
 	int gInstance = 3;
 	int region_size = 50;
@@ -119,6 +119,7 @@ int main(int argc, char** argv) {
 
 	for (auto problem:problems) {
 		tie(gInstance, region_size, population1, population2, population3) = problem;
+		cout << "instance = " << gInstance << ", region_size = " << region_size << ", populations = " << population1 << " " << population2 << " " << population3 << endl;
 		EA::Chronometer main_timer;
 		main_timer.tic();
 		ostringstream padded_filename;

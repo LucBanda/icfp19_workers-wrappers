@@ -27,19 +27,19 @@ static const vector<vector<position>> additionnal_manipulators = {
 	{position(0,-1)},
 	{position (0,2), position(0, 1)},
 	{position (0,-2), position(0, -1)},
-	{position (2,1), position(1,1), position(1,0)},
-	{position (-2,1), position(-1,1), position(-1,0)},
-
 	{position (0,3), position(0, 2), position(0,1)},
 	{position (0,-3), position(0, -2), position(0, -1)},
-	{position (3,1), position(1,0), position(2,1)},
-	{position (-3,1), position(-1,0), position(-2,1)},
 	{position (0,4), position(0,3), position(0, 2), position(0,1)},
 	{position (0,-4), position(0, -3), position(0,-2), position(0, -1)},
+	{position (0, 5), position (0,4), position(0,3), position(0, 2), position(0,1)},
+	{position(0, -5), position (0,-4), position(0, -3), position(0,-2), position(0, -1)},
+	{position(2,1), position(1,1), position(1,0)},
+	{position (-2,1), position(-1,1), position(-1,0)},
+	{position (3,1), position(1,0), position(2,1)},
+	{position (-3,1), position(-1,0), position(-2,1)},
 	{position (4,1), position(1,0), position(2,0), position(2,1), position(3,1)},
 	{position (-4,1), position(-1,0), position(-2,0), position(-2,1), position(-3,1)},
-	{position (0, 5), position (0,4), position(0,3), position(0, 2), position(0,1)},
-	{position(0, -5), position (0,-4), position(0, -3), position(0,-2), position(0, -1)}
+
 };
 
 static string get_next_tuple_token(string *line) {

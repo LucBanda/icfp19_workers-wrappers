@@ -90,12 +90,17 @@ pair<vector<SmartGraph::Node>, int> genetic_orderer::execute_sequence(const gene
 				// from now on, dest is considered validated as well as non validated nodes on the path
 				// update length map for next dijkstras
 				for (SmartGraph::IncEdgeIt e(graph, zone); e != INVALID; ++e) {
-					length[e] = cost[e]; // new length if going through a node is approximated to the distance of the centers
+					SmartGraph::Node trgt = graph.v(e);
+					if (trgt == zone) trgt = graph.u(e);
+					if (filled[trgt])
+						length[e] = cost[e]; // new length if going through a node is approximated to the distance of the centers
+					//else cout << "not filled" << endl;
 				}
 							//collect boosters
 				for (auto boost:boosters_map[zone])
 					if (boost == MANIPULATOR) {
 						manip_boosters_catches++;
+						//cout << "catch booster" << endl;
 					} else if (boost == FASTWHEEL) {
 						fastwheel_boosters_credit += 50;
 					}
@@ -128,7 +133,7 @@ genetic_orderer::MySolution genetic_orderer::mutate(
 	const std::function<double(void)>& rnd01, double shrink_scale) {
 	MySolution X_new;
 	X_new.split = X_base.split;
-	int nb_of_mutations = max(50., 1. * rnd01() * shrink_scale);
+	int nb_of_mutations = max(1., 1. * rnd01() * shrink_scale);
 
 	for (int i = 0; i < nb_of_mutations; i++) {
 		vector<SmartGraph::Node> new_split;
@@ -265,6 +270,7 @@ genetic_orderer::genetic_orderer(mine_navigator& arg_nav,
 		}
 		else
 			starting_node = u;
+		boosters_map[u] = arg_nav.boosters_in_node_list(zone);
 	}
 
 	// calculate adjacent zones with bfs from the center
@@ -314,12 +320,18 @@ void genetic_orderer::init_node_cost_map() {
 					 	submine_to_mine_nodes[orig][0], "");
 			vector<Node> zone = submine_to_mine_nodes[orig];
 			int size_of_zone = submine_to_mine_nodes[orig].size();
-			mine_cost_optim.solve(size_of_zone * 2, 3);
-			node_cost_per_booster_cnt[orig].push_back(mine_cost_optim.score);
-			cout << graph.id(orig) << ", " << i << ": " << mine_cost_optim.score << endl;
+			mine_cost_optim.solve(max(size_of_zone * 2, 150), 3);
+			int score = mine_cost_optim.score;
+			if ((node_cost_per_booster_cnt[orig].size() > 0) && score > *(node_cost_per_booster_cnt[orig].end() - 1) -1) {
+				score = *(node_cost_per_booster_cnt[orig].end() -1) -1;
+				cout << graph.id(orig) << ", " << i << ": " << score << " (fixed)" << endl;
+			} else {
+				cout << graph.id(orig) << ", " << i << ": " << score << endl;
+			}
+			node_cost_per_booster_cnt[orig].push_back(score);
+
 		}
 	}
-
 }
 
 genetic_orderer::~genetic_orderer() {}
@@ -335,7 +347,7 @@ vector<vector<Node>> genetic_orderer::solve(int population_size) {
 	GA_Type ga_obj;
 	ga_obj.problem_mode = EA::GA_MODE::SOGA;
 	ga_obj.multi_threading = true;
-	ga_obj.dynamic_threading = true;
+	ga_obj.dynamic_threading = false;
 	ga_obj.verbose = false;
 	ga_obj.population = population_size;
 	ga_obj.generation_max = 6000;

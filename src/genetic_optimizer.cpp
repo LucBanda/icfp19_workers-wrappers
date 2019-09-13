@@ -63,8 +63,33 @@ MySolution genetic_optimizer::mutate(const MySolution& X_base,
 	MySolution X_new = X_base;
 	int nb_of_mutations = max(1, (int)(10. * rnd01() * shrink_scale));
 
+	int swap1 = 0;
+	int swap2 = 0;
+	int minswap, maxswap;
+	//double action = rnd01();
+	while (swap1 == swap2) {
+		swap1 = rnd01() * X_base.node_list.size();
+		swap2 = rnd01() * X_base.node_list.size();
+	}
+
+	minswap = min(swap1, swap2);
+	maxswap = max(swap1, swap2);
+
+	MySolution X_input = X_new;
+	X_new.node_list.clear();
+	int i;
+	for (i = 0; i < minswap; i++) {
+		X_new.node_list.push_back(X_input.node_list[i]);
+	}
+	for (i = maxswap - 1; i >= minswap; i--) {
+		X_new.node_list.push_back(X_input.node_list[i]);
+	}
+	for (i = maxswap; i < X_input.node_list.size(); i++) {
+		X_new.node_list.push_back(X_input.node_list[i]);
+	}
+
 	for (int i = 0; i < nb_of_mutations; i++) {
-		int swap1 = 0;
+		/*int swap1 = 0;
 		int swap2 = 0;
 		int minswap, maxswap;
 		double action = rnd01();
@@ -76,20 +101,10 @@ MySolution genetic_optimizer::mutate(const MySolution& X_base,
 		minswap = min(swap1, swap2);
 		maxswap = max(swap1, swap2);
 
-		if (action < 2) {
-			MySolution X_input = X_new;
-			X_new.node_list.clear();
-			int i;
-			for (i = 0; i < minswap; i++) {
-				X_new.node_list.push_back(X_input.node_list[i]);
-			}
-			for (i = maxswap - 1; i >= minswap; i--) {
-				X_new.node_list.push_back(X_input.node_list[i]);
-			}
-			for (i = maxswap; i < X_input.node_list.size(); i++) {
-				X_new.node_list.push_back(X_input.node_list[i]);
-			}
-		} else {
+		if (action < .5) {
+
+		} else {*/
+		swap1 = rnd01() * X_base.node_list.size();
 			pair<Node, orientation> node;
 			node = X_new.node_list[swap1];
 			orientation new_orient = (orientation)(
@@ -104,7 +119,7 @@ MySolution genetic_optimizer::mutate(const MySolution& X_base,
 			X_new.node_list.erase(X_new.node_list.begin() + swap2);
 			X_new.node_list.emplace(X_new.node_list.begin() + swap2, node.first,
 									new_orient);
-		}
+		//}
 	}
 	return X_new;
 }
@@ -193,7 +208,7 @@ pair<string, Node> genetic_optimizer::solve(int population_size, int generation_
 	GA_Type ga_obj;
 	ga_obj.problem_mode = EA::GA_MODE::SOGA;
 	ga_obj.multi_threading = true;
-	ga_obj.idle_delay_us = 1;  // switch between threads quickly
+	//ga_obj.idle_delay_us = 1;  // switch between threads quickly
 	ga_obj.dynamic_threading = false;
 	ga_obj.verbose = false;
 	ga_obj.population = population_size;
@@ -212,7 +227,7 @@ pair<string, Node> genetic_optimizer::solve(int population_size, int generation_
 	ga_obj.mutation_rate = 0.3;
 	ga_obj.best_stall_max = 20;
 	ga_obj.average_stall_max = 20;
-	ga_obj.elite_count = min(50, population_size / 2);
+	ga_obj.elite_count = 50;
 
 	ga_obj.solve();
 	score = ga_obj.last_generation.best_total_cost;
