@@ -10,6 +10,14 @@ agent::agent(mine_state *arg_mine, mine_navigator *arg_navigator, Node arg_start
 
 agent::~agent() {}
 
+
+bool take_booster(mine_state *mine, Booster boost) {
+	if (boost == MANIPULATOR) {
+		return true;
+	}
+	return false;
+}
+
 string agent::execution_map_from_node_list(vector<pair<Node, orientation>> list_node) {
 	string result;
 	for (auto it = list_node.begin(); it != list_node.end(); ++it) {
@@ -20,8 +28,9 @@ string agent::execution_map_from_node_list(vector<pair<Node, orientation>> list_
 		string new_string = navigator->get_orientation(mine->current_orientation, it->second);
 		new_string += navigator->goto_node(last_node, it->first);
 		last_node = it->first;
+		new_string = mine->apply_command(new_string, &take_booster);
 		result += new_string;
-		mine->apply_command(new_string);
+
 	}
 	return result;
 }

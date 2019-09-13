@@ -128,7 +128,7 @@ genetic_orderer::MySolution genetic_orderer::mutate(
 	const std::function<double(void)>& rnd01, double shrink_scale) {
 	MySolution X_new;
 	X_new.split = X_base.split;
-	int nb_of_mutations = max(1., 10. * rnd01() * shrink_scale);
+	int nb_of_mutations = max(50., 1. * rnd01() * shrink_scale);
 
 	for (int i = 0; i < nb_of_mutations; i++) {
 		vector<SmartGraph::Node> new_split;
@@ -302,7 +302,7 @@ genetic_orderer::genetic_orderer(mine_navigator& arg_nav,
 
 void genetic_orderer::init_node_cost_map() {
 	for (SmartGraph::NodeIt orig(graph); orig != INVALID; ++orig) {
-		for(int i = 0; i < nav.mine->manipulators_boosters.size(); i++) {
+		for(int i = 0; i < nav.mine->manipulators_boosters.size() + 1; i++) {
 			mine_state fake_mine(nav.mine);
 			fake_mine.robot = nav.coord_map[submine_to_mine_nodes[orig][0]];
 			fake_mine.set_current_nb_of_manipulators(i);
@@ -312,8 +312,11 @@ void genetic_orderer::init_node_cost_map() {
 			genetic_optimizer mine_cost_optim(0, &nav, &fake_mine,
 					 fake_list_of_position, 0,
 					 	submine_to_mine_nodes[orig][0], "");
-			mine_cost_optim.solve(100, 1);
+			vector<Node> zone = submine_to_mine_nodes[orig];
+			int size_of_zone = submine_to_mine_nodes[orig].size();
+			mine_cost_optim.solve(size_of_zone * 2, 3);
 			node_cost_per_booster_cnt[orig].push_back(mine_cost_optim.score);
+			cout << graph.id(orig) << ", " << i << ": " << mine_cost_optim.score << endl;
 		}
 	}
 
@@ -350,11 +353,11 @@ vector<vector<Node>> genetic_orderer::solve(int population_size) {
 		ga_obj.SO_report_generation = std::bind(
 			&genetic_orderer::SO_report_generation, this, _1, _2, _3);
 	}
-	ga_obj.crossover_fraction = 0.7;
+	ga_obj.crossover_fraction = 0.8;
 	ga_obj.mutation_rate = 0.3;
 	ga_obj.best_stall_max = 30;
 	ga_obj.average_stall_max = 10;
-	ga_obj.elite_count = 200;
+	ga_obj.elite_count = 20;
 
 	ga_obj.solve();
 

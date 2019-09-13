@@ -15,14 +15,14 @@
 #include "sys/time.h"
 
 static const vector<tuple<int, int, int, int, int>> testbench_table = {
-	{2, 50, 3000, 2000, 3000},
-	{3, 30, 3000, 2000, 3000},
-	{4, 30, 3000, 2000, 3000},
-	{10, 50, 3000, 2000, 3000},
-	{35, 50, 3000, 2000, 3000},
-	{57, 100, 3000, 2000, 3000},
-	{150, 150, 3000, 2000, 3000},
-	{201, 200, 3000, 2000, 3000},
+	{2, 50, 3000, 6000, 3000},
+	{3, 30, 3000, 6000, 3000},
+	{4, 30, 3000, 6000, 3000},
+	{10, 30, 3000, 6000, 3000},
+	{35, 30, 3000, 6000, 3000},
+	{57, 50, 3000, 6000, 3000},
+	{150, 100, 3000, 6000, 3000},
+	{201, 150, 3000, 6000, 3000},
 };
 
 static void print_help() {
@@ -41,13 +41,13 @@ int main(int argc, char** argv) {
 	int start_instance = 0;
 	int c;
 	int population1 = 3000;
-	int population2 = 2000;
+	int population2 = 1000;
 	int population3 = 3000;
-	int gInstance = 150;
+	int gInstance = 3;
 	int region_size = 50;
 	bool perform_partitionning = false;
 	bool perform_ordering = false;
-	bool perform_optimization = false;
+	bool perform_optimization = true;
 	bool verbose = true;
 	int popu;
 	bool testbench = false;
@@ -207,8 +207,9 @@ int main(int argc, char** argv) {
 				output_file.open("./results/" + to_string(gInstance) + ".txt",
 								std::ofstream::trunc);
 				output_file << solution_str << endl;
+				output_file.flush();
 				output_file.close();
-				cout << "instance " << gInstance << ", " << i+1 << "/" << zone_list.size() << ", total size = " << solution_str.length() << endl;
+				cout << "instance " << gInstance << ", " << i+1 << "/" << zone_list.size() << ", total score = " << optimizer.score << endl;
 			}
 			std::ofstream output_file;
 			output_file.open("./testbench/" + testbench_identifier + ".txt",

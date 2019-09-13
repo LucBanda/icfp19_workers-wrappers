@@ -65,7 +65,7 @@ class mine_state {
 	double distance_loss;
 	int time_step;
 	bool is_point_valid(position point, vector<position> *mine_map);
-	void apply_command(string command);
+	string apply_command(string command, bool booster_cb(mine_state *, Booster boost) = NULL);
 	vector<string> get_next_valid_command();
 	string strip(string commands);
 	bool board_tile_is_painted(position tile);
@@ -80,7 +80,7 @@ class mine_state {
 
 	position robot;
 	enum orientation current_orientation;
-	vector<position> relative_manipulators;
+	vector<vector<position>> relative_manipulators;
 	vector<position> manipulators_boosters;
 	vector<position> fastwheels_boosters;
 	vector<position> drill_boosters;

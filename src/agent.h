@@ -18,6 +18,7 @@ class agent {
 	void step();
 	void set_execution_map(string map);
 	string execution_map_from_node_list(vector<pair<Node, orientation>> node_list);
+//	string take_booster(mine_state *mine, Booster boost);
 
    protected:
 	double initial_targets;

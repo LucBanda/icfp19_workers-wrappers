@@ -15,7 +15,13 @@ bool idle(void* user_param) {
 	struct main_status* status = (struct main_status*)user_param;
 	mine_state* mine = status->mine;
 	string command = status->execution_list.substr(0, 1);
-	status->execution_list.erase(0, 1);
+	if (command == "B") {
+		int pos = status->execution_list.find(')');
+		command = status->execution_list.substr(0, pos+1);
+		status->execution_list.erase(0, pos+1);
+	} else {
+		status->execution_list.erase(0, 1);
+	}
 	mine->apply_command(command);
 	return false;
 }
@@ -35,8 +41,8 @@ int main(int argc, char** argv) {
 	struct main_status status;
 	renderer* render;
 	int c;
-	bool load_result = false;
-	int instance = 4;
+	bool load_result = true;
+	int instance = 3;
 	string exec;
 	string fileName = "";
 	int start_instance = 0;

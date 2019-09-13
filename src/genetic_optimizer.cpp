@@ -53,9 +53,6 @@ bool genetic_optimizer::eval_solution(const MySolution& p, MyMiddleCost& c) {
 		}
 	}
 	c.objective1 = executeur.get_cost() + cost_to_next_zone;
-	if (c.objective1 == 0) {
-		cout << "issue" << endl;
-	}
 
 	return true;  // solution is accepted
 }
@@ -79,7 +76,7 @@ MySolution genetic_optimizer::mutate(const MySolution& X_base,
 		minswap = min(swap1, swap2);
 		maxswap = max(swap1, swap2);
 
-		if (action < 0.5) {
+		if (action < 2) {
 			MySolution X_input = X_new;
 			X_new.node_list.clear();
 			int i;
@@ -97,9 +94,6 @@ MySolution genetic_optimizer::mutate(const MySolution& X_base,
 			node = X_new.node_list[swap1];
 			orientation new_orient = (orientation)(
 				(X_new.node_list[swap1].second + (int)(4. * rnd01())) % 4);
-			if (new_orient > WEST) {
-				cout << "issue" << endl;
-			}
 			X_new.node_list.erase(X_new.node_list.begin() + swap1);
 			X_new.node_list.emplace(X_new.node_list.begin() + swap1, node.first,
 									new_orient);
@@ -107,9 +101,6 @@ MySolution genetic_optimizer::mutate(const MySolution& X_base,
 			node = X_new.node_list[swap2];
 			new_orient = (orientation)(
 				(X_new.node_list[swap2].second + (int)(4. * rnd01())) % 4);
-			if (new_orient > WEST) {
-				cout << "issue" << endl;
-			}
 			X_new.node_list.erase(X_new.node_list.begin() + swap2);
 			X_new.node_list.emplace(X_new.node_list.begin() + swap2, node.first,
 									new_orient);
@@ -122,6 +113,7 @@ MySolution genetic_optimizer::crossover(
 	const MySolution& X1, const MySolution& X2,
 	const std::function<double(void)>& rnd01) {
 	MySolution X_new;
+
 
 	int position1 = rnd01() * X1.node_list.size();
 	int position2 = rnd01() * X1.node_list.size();
@@ -220,7 +212,7 @@ pair<string, Node> genetic_optimizer::solve(int population_size, int generation_
 	ga_obj.mutation_rate = 0.3;
 	ga_obj.best_stall_max = 20;
 	ga_obj.average_stall_max = 20;
-	ga_obj.elite_count = 50;
+	ga_obj.elite_count = min(50, population_size / 2);
 
 	ga_obj.solve();
 	score = ga_obj.last_generation.best_total_cost;

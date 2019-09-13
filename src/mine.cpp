@@ -16,18 +16,13 @@
 	 (x).imag() < max_size_y && board[(x).real()][(x).imag()] == PAINTED)
 #define BOARD_TILE(x) board[(x).real()][(x).imag()]
 
-  /*relative_manipulators.push_back(position(0, 1));
-	relative_manipulators.push_back(position(1, 1));
-	relative_manipulators.push_back(position(-1, 1));
-	relative_manipulators.push_back(position(0, 0));*/
-
-static const vector<position> additionnal_manipulators = {
+/*static const vector<position> additionnal_manipulators = {
 	position(0, -1), position(0, 2), position(0, -2), position(2, 1), position(-2, 1),
 	position(0, 3), position(0, -3), position(3, 1),
 	position(-3, 1), position(0, 4), position(0, -4), position(4, 1),
-	position(-4, 1), position(0, 5), position(0, -5) };
+	position(-4, 1), position(0, 5), position(0, -5) };*/
 
-static const vector<vector<position>> manipulators_masks = {
+static const vector<vector<position>> additionnal_manipulators = {
 	{position(0, 1)}, {position(1,1)}, {position(-1, 1)}, {position(0,0)}, //those are the four default manipulators
 	{position(0,-1)},
 	{position (0,2), position(0, 1)},
@@ -332,10 +327,10 @@ mine_state::mine_state(string filename) {
 			}
 		}
 	}
-	relative_manipulators.push_back(position(0, 1));
-	relative_manipulators.push_back(position(1, 1));
-	relative_manipulators.push_back(position(-1, 1));
-	relative_manipulators.push_back(position(0, 0));
+	relative_manipulators.push_back(additionnal_manipulators[0]);
+	relative_manipulators.push_back(additionnal_manipulators[1]);
+	relative_manipulators.push_back(additionnal_manipulators[2]);
+	relative_manipulators.push_back(additionnal_manipulators[3]);
 	// validate points
 	current_orientation = EAST;
 	vector<position> absolute_manip = absolute_valid_manipulators();
@@ -393,12 +388,13 @@ bool mine_state::is_point_valid(position point, vector<position> *mine_map) {
 
 void mine_state::set_current_nb_of_manipulators(int nb) {
 	relative_manipulators.clear();
-	relative_manipulators.push_back(position(0, 1));
-	relative_manipulators.push_back(position(1, 1));
-	relative_manipulators.push_back(position(-1, 1));
-	relative_manipulators.push_back(position(0, 0));
-	for (int i = 0; i < nb; i++) {
+	relative_manipulators.push_back(additionnal_manipulators[0]);
+	relative_manipulators.push_back(additionnal_manipulators[1]);
+	relative_manipulators.push_back(additionnal_manipulators[2]);
+	relative_manipulators.push_back(additionnal_manipulators[3]);
+	for (int i = 4; i < nb; i++) {
 		relative_manipulators.push_back(additionnal_manipulators[i]);
+		owned_manipulators_boosters = nb;
 	}
 }
 
@@ -443,15 +439,15 @@ vector<position> mine_state::absolute_valid_manipulators() {
 			break;
 	}
 
-	for (int i = 0; i < relative_manipulators.size(); i++) {
+	for (auto manipulator:relative_manipulators) {
 		bool should_apply = true;
-		for (auto mask:manipulators_masks[i]) {
+		for (auto mask:manipulator) {
 			if (BOARD_TILE_IS_WALL(mask * multiplier + robot)) {
 				should_apply = false;
 			}
 		}
 		if (should_apply) {
-			result.push_back(robot + relative_manipulators[i] * multiplier);
+			result.push_back(robot + manipulator[0] * multiplier);
 		}
 	}
 	return result;
@@ -529,8 +525,9 @@ vector<Booster> mine_state::boosters_in_position_list(vector<position> list) {
 	return result;
 }
 
-void mine_state::apply_command(string command) {
+string mine_state::apply_command(string command, bool booster_cb(mine_state *, Booster boost)) {
 	bool invalid_move = false;
+	string result;
 
 	for (unsigned int i = 0; i < command.length(); i++) {
 		position new_pos(-1, -1);
@@ -538,26 +535,48 @@ void mine_state::apply_command(string command) {
 		switch (command[i]) {
 			case 'W':
 				new_pos = robot + position(0, 1);
+				result += command[i];
 				break;
 			case 'S':
 				new_pos = robot + position(0, -1);
+				result += command[i];
 				break;
 			case 'A':
 				new_pos = robot + position(-1, 0);
+				result += command[i];
 				break;
 			case 'D':
 				new_pos = robot + position(1, 0);
+				result += command[i];
 				break;
 			case 'E':
 				current_orientation =
 					(enum orientation)((current_orientation + 1) % 4);
+				result += command[i];
 				time_step++;
 				break;
+			case'B': {
+				int pos_x = command.find(',', i);
+				int x = stoi(command.substr(i+2, pos_x));
+				int pos_y = command.find(')', pos_x);
+				string substr = command.substr(pos_x+1, pos_y);
+				int y = stoi(substr);
+				i = pos_y;
+				for (auto boost:additionnal_manipulators) {
+					if (boost[0] == position(x,y)) {
+						relative_manipulators.push_back(boost);
+					}
+				}
+				result += "B(" + to_string(x) + ","+ to_string(y) + ")";
+				break;
+			}
+
 			case 'Q':
 				current_orientation = (enum orientation)(
 					current_orientation == NORTH ? WEST
 												 : current_orientation - 1);
 				time_step++;
+				result += command[i];
 				break;
 		}
 		// move
@@ -568,14 +587,46 @@ void mine_state::apply_command(string command) {
 				time_step++;
 			} else {
 				invalid_move = true;
+				result.erase(result.length()-1);
 			}
+		}
+
+		// collect manipulator booster
+		auto pos_to_remove = find(manipulators_boosters.begin(),
+								  manipulators_boosters.end(), robot);
+		if (pos_to_remove != manipulators_boosters.end()) {
+			manipulators_boosters.erase(pos_to_remove);
+			owned_manipulators_boosters += 1;
+			if (booster_cb && booster_cb(this, MANIPULATOR)) {
+				vector<position> additionnal_manipulator = additionnal_manipulators[owned_manipulators_boosters+3];
+				relative_manipulators.push_back(additionnal_manipulator);
+				result += "B(" + to_string(additionnal_manipulator[0].real()) + ","+ to_string(additionnal_manipulator[0].imag()) + ")";
+			}
+		}
+		// collect fast booster
+		pos_to_remove =
+			find(fastwheels_boosters.begin(), fastwheels_boosters.end(), robot);
+		if (pos_to_remove != fastwheels_boosters.end()) {
+			fastwheels_boosters.erase(pos_to_remove);
+			owned_fastwheels_boosters += 1;
+			/*if (booster_cb && booster_cb(this, FASTWHEEL)) {
+				result += "F";
+			}*/
+		}
+		// collect manipulator booster
+		pos_to_remove =
+			find(drill_boosters.begin(), drill_boosters.end(), robot);
+		if (pos_to_remove != drill_boosters.end()) {
+			drill_boosters.erase(pos_to_remove);
+			owned_drill_boosters += 1;
+			//if (booster_cb) booster_cb(this, DRILL);
 		}
 
 		// validate tiles
 		bool validated = false;
 		auto absolute_manip = absolute_valid_manipulators();
 		for (auto it:absolute_manip) {
-			if (BOARD_TILE(it) != PAINTED) {
+			if (!BOARD_TILE_IS_WALL(it)) {
 				BOARD_TILE(it) = PAINTED;
 				validated = true;
 				non_validated_tiles--;
@@ -585,28 +636,7 @@ void mine_state::apply_command(string command) {
 			distance_loss++;
 		}
 
-		// collect manipulator booster
-		auto pos_to_remove = find(manipulators_boosters.begin(),
-								  manipulators_boosters.end(), robot);
-		if (pos_to_remove != manipulators_boosters.end()) {
-			manipulators_boosters.erase(pos_to_remove);
-			owned_manipulators_boosters += 1;
-			relative_manipulators.push_back(
-				additionnal_manipulators[owned_manipulators_boosters - 1]);
-		}
-		// collect fast booster
-		pos_to_remove =
-			find(fastwheels_boosters.begin(), fastwheels_boosters.end(), robot);
-		if (pos_to_remove != fastwheels_boosters.end()) {
-			fastwheels_boosters.erase(pos_to_remove);
-			owned_fastwheels_boosters += 1;
-		}
-		// collect manipulator booster
-		pos_to_remove =
-			find(drill_boosters.begin(), drill_boosters.end(), robot);
-		if (pos_to_remove != drill_boosters.end()) {
-			drill_boosters.erase(pos_to_remove);
-			owned_drill_boosters += 1;
-		}
+
 	}
+	return result;
 }
