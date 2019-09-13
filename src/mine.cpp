@@ -626,7 +626,7 @@ string mine_state::apply_command(string command, bool booster_cb(mine_state *, B
 		bool validated = false;
 		auto absolute_manip = absolute_valid_manipulators();
 		for (auto it:absolute_manip) {
-			if (!BOARD_TILE_IS_WALL(it)) {
+			if (!BOARD_TILE_IS_WALL(it) && !BOARD_TILE_IS_PAINTED(it)) {
 				BOARD_TILE(it) = PAINTED;
 				validated = true;
 				non_validated_tiles--;

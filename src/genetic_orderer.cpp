@@ -79,24 +79,13 @@ pair<vector<SmartGraph::Node>, int> genetic_orderer::execute_sequence(const gene
 		int zone_cost = 0;
 		for (int i = 0; i < pathNodes.size(); i++) {
 			auto zone = pathNodes[i];
-			if (zone != dest) {
-				auto edge = pathEdges[i];
-				path_cost += length[edge];
-			}
 			if (!filled[zone]) {
 				zone_cost += node_cost_per_booster_cnt[zone][manip_boosters_catches];
 				result_order.push_back(zone);
 				filled[zone] = true;
 				// from now on, dest is considered validated as well as non validated nodes on the path
 				// update length map for next dijkstras
-				for (SmartGraph::IncEdgeIt e(graph, zone); e != INVALID; ++e) {
-					SmartGraph::Node trgt = graph.v(e);
-					if (trgt == zone) trgt = graph.u(e);
-					if (filled[trgt])
-						length[e] = cost[e]; // new length if going through a node is approximated to the distance of the centers
-					//else cout << "not filled" << endl;
-				}
-							//collect boosters
+				//collect boosters
 				for (auto boost:boosters_map[zone])
 					if (boost == MANIPULATOR) {
 						manip_boosters_catches++;
@@ -104,7 +93,29 @@ pair<vector<SmartGraph::Node>, int> genetic_orderer::execute_sequence(const gene
 					} else if (boost == FASTWHEEL) {
 						fastwheel_boosters_credit += 50;
 					}
+				for (SmartGraph::IncEdgeIt e(graph, zone); e != INVALID; ++e) {
+					SmartGraph::Node trgt = graph.v(e);
+					if (trgt == zone) trgt = graph.u(e);
+					if (filled[trgt])
+						length[e] = cost[e];
+					else length[e] = cost[e] / 2;
+				}
+			} else {
+				if (zone != dest) {
+					auto edge = pathEdges[i];
+					path_cost += cost[edge];
+					//cout << length[edge] << endl;;
+				}
 			}
+			//for (SmartGraph::IncEdgeIt e(graph, zone); e != INVALID; ++e) {
+				//SmartGraph::Node trgt = graph.v(e);
+				//if (trgt == zone) trgt = graph.u(e);
+				//if (filled[trgt])
+			//		length[e] = cost[e];
+				/*else
+					length[e] = cost[e] / 2;*/// new length if going through a node is approximated to the distance of the centers
+				//else cout << "not filled" << endl;
+			//}
 		}
 		orig = dest;
 		//here we should consider discount of fastwheel
@@ -320,18 +331,18 @@ void genetic_orderer::init_node_cost_map() {
 					 	submine_to_mine_nodes[orig][0], "");
 			vector<Node> zone = submine_to_mine_nodes[orig];
 			int size_of_zone = submine_to_mine_nodes[orig].size();
-			mine_cost_optim.solve(max(size_of_zone * 2, 150), 3);
+			mine_cost_optim.solve(max(size_of_zone * 2, 150), 2);
 			int score = mine_cost_optim.score;
 			if ((node_cost_per_booster_cnt[orig].size() > 0) && score > *(node_cost_per_booster_cnt[orig].end() - 1) -1) {
 				score = *(node_cost_per_booster_cnt[orig].end() -1) -1;
-				cout << graph.id(orig) << ", " << i << ": " << score << " (fixed)" << endl;
+				//cout << graph.id(orig) << " ";
 			} else {
-				cout << graph.id(orig) << ", " << i << ": " << score << endl;
+				//cout << graph.id(orig) << " ";
 			}
 			node_cost_per_booster_cnt[orig].push_back(score);
-
 		}
 	}
+	//cout << endl;
 }
 
 genetic_orderer::~genetic_orderer() {}
@@ -363,7 +374,7 @@ vector<vector<Node>> genetic_orderer::solve(int population_size) {
 			&genetic_orderer::SO_report_generation, this, _1, _2, _3);
 	} else {
 		ga_obj.SO_report_generation = std::bind(
-			&genetic_orderer::SO_report_generation, this, _1, _2, _3);
+			&genetic_orderer::SO_report_generation_empty, this, _1, _2, _3);
 	}
 	ga_obj.crossover_fraction = 0.8;
 	ga_obj.mutation_rate = 0.3;

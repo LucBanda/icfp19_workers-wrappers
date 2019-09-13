@@ -47,10 +47,11 @@ int main(int argc, char** argv) {
 	int region_size = 50;
 	bool perform_partitionning = false;
 	bool perform_ordering = false;
-	bool perform_optimization = true;
-	bool verbose = true;
+	bool perform_optimization = false;
+	bool verbose = false;
 	int popu;
 	bool testbench = false;
+	bool auto_region_size = true;
 	string testbench_identifier = "";
 
 	while ((c = getopt(argc, argv, "t:123s:p:a:hi:v")) != -1) switch (c) {
@@ -73,6 +74,7 @@ int main(int argc, char** argv) {
 			break;
 		case 's':
 			region_size = atoi(optarg);
+			auto_region_size = false;
 			break;
 		case '1':
 			perform_partitionning = true;
@@ -94,9 +96,10 @@ int main(int argc, char** argv) {
 	//parameters are : <0> = instance; <1> size_of_region; <2> population1; <3> population2; <4> population3
 	vector<tuple<int, int, int, int, int>> problems;
 	if (do_all) {
+		auto_region_size = true;
 		for (int i = start_instance; i < 301; i++) {
 			population1 = 3000;
-			population2 = 5000;
+			population2 = 4000;
 			population3 = 3000;
 			problems.push_back(make_tuple(i, region_size, population1, population2, population3));
 		}
@@ -105,6 +108,7 @@ int main(int argc, char** argv) {
 		perform_partitionning = true;
 		perform_ordering = true;
 		perform_optimization = true;
+		auto_region_size = true;
 		for (auto it:testbench_table) {
 			problems.push_back(it);
 		}
@@ -119,6 +123,15 @@ int main(int argc, char** argv) {
 
 	for (auto problem:problems) {
 		tie(gInstance, region_size, population1, population2, population3) = problem;
+		if (auto_region_size) {
+			if (gInstance == 2) region_size = 50;
+			else if (gInstance < 21) region_size = 30;
+			else if (gInstance < 51) region_size = 50;
+			else if (gInstance < 101) region_size = 70;
+			else if (gInstance < 151) region_size = 100;
+			else if (gInstance < 181) region_size = 70;
+			else if (gInstance < 201) region_size = 150;
+		}
 		cout << "instance = " << gInstance << ", region_size = " << region_size << ", populations = " << population1 << " " << population2 << " " << population3 << endl;
 		EA::Chronometer main_timer;
 		main_timer.tic();

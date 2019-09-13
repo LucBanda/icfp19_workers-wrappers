@@ -37,6 +37,7 @@ class renderer {
 	vector<vector<position>> zones;
 	vector<vector<position>> ordered_zones;
 	enum renderer_mode mode;
+	bool display_path = false;
 	bool display_text = false;
 
    public:

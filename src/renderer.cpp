@@ -132,8 +132,8 @@ void renderer::draw() {
 				}
 			}
 		}
-
-		for (auto zone : (mode == ZONES ? zones : ordered_zones)) {
+		vector<vector<position>> &zones_to_use = (mode == ZONES ? zones : ordered_zones);
+		for (auto zone : zones_to_use) {
 			for (auto pixel : zone) {
 				al_draw_filled_rectangle(TO_SCREEN(pixel),
 										 TO_SCREEN(pixel + position(1, 1)),
@@ -149,13 +149,13 @@ void renderer::draw() {
 									 TO_SCREEN(pos_of_sub_rectangle2),
 									 al_map_rgba(255, 255, 255, 255));
 			if (blue != 0) {
-				blue += 30;
+				blue += 10;
 				if (blue > 235) blue = 0;
 			} else if (red != 0) {
-				red += 30;
+				red += 10;
 				if (red > 235) red = 0;
 			} else if (green != 0) {
-				green += 30;
+				green += 10;
 				if (green > 235) green = 0;
 			}
 			if (red == 0 && green == 0 && blue == 0) {
@@ -164,9 +164,14 @@ void renderer::draw() {
 				blue = 15;
 			}
 		}
+		if (display_path) {
+			for (int i = 0; i < zones_to_use.size() - 1; i++) {
+				al_draw_line(TO_SCREEN(zones_to_use[i][0]), TO_SCREEN(zones_to_use[i+1][0]), WHITE_COL, 5 / SHAPE_SCALE);
+			}
+		}
 		if (display_text) {
 			int i = 0;
-			for (auto zone : (mode == ZONES ? zones : ordered_zones)) {
+			for (auto zone : zones_to_use) {
 				complex<double> pos_of_center =
 					complex<double>(zone[0].real(), zone[0].imag()) +
 					complex<double>(0.5, 0.5);
@@ -300,7 +305,9 @@ void renderer::mainLoop() {
 					SCALE = SCALE + SCALE / 4.;
 					scale_edited = true;
 					break;
-
+				case ALLEGRO_KEY_P:
+					display_path = !display_path;
+					break;
 				case ALLEGRO_KEY_R:
 					mode = ZONES;
 					key[KEY_R] = false;
