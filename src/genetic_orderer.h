@@ -9,12 +9,12 @@
 
 class genetic_orderer {
 	struct MySolution {
-		vector<SmartGraph::Node> split;
+		vector<int> split;
 
 		string to_string(genetic_orderer* optim) const {
 			ostringstream res;
 			for (auto it : split) {
-				res << optim->graph.id(it) << " / ";
+				res << it << " / ";
 			}
 			return res.str();
 		}
@@ -50,7 +50,7 @@ class genetic_orderer {
 	vector<vector<Node>> solve(int population_size);
 
    private:
-	pair<vector<SmartGraph::Node>, int> execute_sequence(const genetic_orderer::MySolution &p);
+	int execute_sequence(const genetic_orderer::MySolution &p, vector<SmartGraph::Node>* result = NULL);
 	bool eval_solution(const genetic_orderer::MySolution& p,
 					   genetic_orderer::MyMiddleCost& c);
 	void init_genes(genetic_orderer::MySolution& p,

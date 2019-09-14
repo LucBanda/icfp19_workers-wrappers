@@ -41,12 +41,12 @@ int main(int argc, char** argv) {
 	int start_instance = 0;
 	int c;
 	int population1 = 3000;
-	int population2 = 5000;
+	int population2 = 7000;
 	int population3 = 3000;
-	int gInstance = 3;
+	int gInstance = 2;
 	int region_size = 50;
 	bool perform_partitionning = false;
-	bool perform_ordering = false;
+	bool perform_ordering = true;
 	bool perform_optimization = false;
 	bool verbose = false;
 	int popu;
@@ -99,7 +99,7 @@ int main(int argc, char** argv) {
 		auto_region_size = true;
 		for (int i = start_instance; i < 301; i++) {
 			population1 = 3000;
-			population2 = 4000;
+			population2 = 5000;
 			population3 = 3000;
 			problems.push_back(make_tuple(i, region_size, population1, population2, population3));
 		}
