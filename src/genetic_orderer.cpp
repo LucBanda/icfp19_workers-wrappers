@@ -41,51 +41,51 @@ int genetic_orderer::execute_sequence(const genetic_orderer::MySolution &p, vect
 
 	SmartGraph::Node orig = starting_node;
 	SmartGraph::Node dest = starting_node;
-	SmartGraph::NodeMap<bool> *filled = new SmartGraph::NodeMap<bool>(graph, false);
-	SmartGraph::EdgeMap<int>  *length = new SmartGraph::EdgeMap<int>(graph, 1);
+	SmartGraph::NodeMap<bool> filled(graph, false);
+	SmartGraph::EdgeMap<int>  length(graph, 1);
 
 	int manip_boosters_catches = 0;
 	int fastwheel_boosters_credit = 0;
 
 	//start with start node
 	result_score = 0;
-	(*filled)[starting_node] = true;
+	filled[starting_node] = true;
 	for (SmartGraph::IncEdgeIt e(graph, starting_node); e != INVALID; ++e) {
-		length->set(e, cost[e]); // new length if going through a node is approximated to the distance of the centers
+		length.set(e, cost[e]); // new length if going through a node is approximated to the distance of the centers
 	}
 
 	for (auto it = p.split.begin(); it != p.split.end(); ++it) {
 		dest = node_list.at(*it);
-		if ((*filled)[dest] ) {
+		if (filled[dest] ) {
 			//if next node to visit is filled, do not take it into account
 			continue;
 		}
-		Dijkstra<SmartGraph, SmartGraph::EdgeMap<int>> dijkstra(graph, (*length));
+		Dijkstra<SmartGraph, SmartGraph::EdgeMap<int>> dijkstra(graph, length);
 
 		dijkstra.run(orig, dest);
 		//auto path = dijkstra.path(dest);
-		vector<SmartGraph::Edge> *pathEdges = new vector<SmartGraph::Edge>;
-		vector<SmartGraph::Node> *pathNodes = new vector<SmartGraph::Node>;
+		vector<SmartGraph::Edge> pathEdges;
+		vector<SmartGraph::Node> pathNodes;
 		SmartGraph::Edge predEdge = dijkstra.predArc(dest);
 		SmartGraph::Node predNode = dijkstra.predNode(dest);
-		pathEdges->reserve(p.split.size());
-		pathNodes->reserve(p.split.size());
+		pathEdges.reserve(p.split.size());
+		pathNodes.reserve(p.split.size());
 		while (predEdge != INVALID) {
-			pathEdges->push_back(predEdge);
-			pathNodes->push_back(predNode);
+			pathEdges.push_back(predEdge);
+			pathNodes.push_back(predNode);
 			predEdge = dijkstra.predArc(predNode);
 			predNode = dijkstra.predNode(predNode);
 		}
-		reverse(pathEdges->begin(), pathEdges->end());
-		reverse(pathNodes->begin(), pathNodes->end());
+		reverse(pathEdges.begin(), pathEdges.end());
+		reverse(pathNodes.begin(), pathNodes.end());
 		int path_cost = 0;
 		int zone_cost = 0;
-		for (int i = 0; i < pathNodes->size(); i++) {
-			auto &zone = pathNodes->at(i);
-			if (!(*filled)[zone]) {
+		for (int i = 0; i < pathNodes.size(); i++) {
+			auto &zone = pathNodes.at(i);
+			if (!filled[zone]) {
 				zone_cost += node_cost_per_booster_cnt[zone][manip_boosters_catches];
 				if (result) result->push_back(zone);
-				(*filled)[zone] = true;
+				filled[zone] = true;
 				// from now on, dest is considered validated as well as non validated nodes on the path
 				// update length map for next dijkstras
 				//collect boosters
@@ -99,27 +99,23 @@ int genetic_orderer::execute_sequence(const genetic_orderer::MySolution &p, vect
 				for (SmartGraph::IncEdgeIt e(graph, zone); e != INVALID; ++e) {
 					SmartGraph::Node trgt = (graph.v(e) == zone) ? graph.u(e) : graph.v(e);
 					//if (trgt == zone) trgt = graph.u(e);
-					if ((*filled)[trgt])
-						(*length)[e] = cost[e];
+					if (filled[trgt])
+						length[e] = cost[e];
 					//else length[e] = cost[e] / 2;
 				}
 			} else {
 				if ((zone != dest)) {
-					auto edge = pathEdges->at(i);
+					auto edge = pathEdges.at(i);
 					path_cost += cost[edge];
 					//cout << length[edge] << endl;;
 				}
 			}
 		}
 		if (result) result->push_back(dest);
-		delete pathEdges;
-		delete pathNodes;
 		orig = dest;
 		//here we should consider discount of fastwheel
 		result_score += zone_cost + path_cost;
 	}
-	delete filled;
-	delete length;
 	return result_score;
 
 }
@@ -357,6 +353,7 @@ vector<vector<Node>> genetic_orderer::solve(int population_size) {
 	ga_obj.best_stall_max = 30;
 	ga_obj.average_stall_max = 10;
 	ga_obj.elite_count = 20;
+	ga_obj.use_quick_search = population_size < 6000;
 
 	ga_obj.solve();
 

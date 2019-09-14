@@ -31,7 +31,6 @@ void genetic_optimizer::init_genes(MySolution& p,
 
 bool genetic_optimizer::eval_solution(const MySolution& p, MyMiddleCost& c) {
 	mine_state mine(&base_mine);
-
 	agent executeur(&mine, navigator, start);
 	executeur.execution_map_from_node_list(p.node_list);
 	Node exit_node = executeur.last_node;
@@ -45,7 +44,7 @@ bool genetic_optimizer::eval_solution(const MySolution& p, MyMiddleCost& c) {
 		// get back path
 		Dijkstra<Graph>::Path path = dijkstra.path(exit_node);
 		for (Dijkstra<Graph>::Path::RevArcIt it(path); it != INVALID;
-			 it.operator++()) {
+			 ++it) {
 			if (find(zones[zone_id + 1].begin(), zones[zone_id + 1].end(),
 					 navigator->graph.source(it)) != zones[zone_id + 1].end())
 				break;
@@ -228,6 +227,7 @@ pair<string, Node> genetic_optimizer::solve(int population_size, int generation_
 	ga_obj.best_stall_max = 20;
 	ga_obj.average_stall_max = 20;
 	ga_obj.elite_count = 50;
+	ga_obj.use_quick_search = population_size < 6000;
 
 	ga_obj.solve();
 	score = ga_obj.last_generation.best_total_cost;
