@@ -19,19 +19,23 @@ typedef EA::GenerationType<MySolution, MyMiddleCost> Generation_Type;
 class genetic_optimizer {
    public:
 	int instance;
+	bool verbose;
+	agent &base_agent;
+
 	string filename;
-	mine_state base_mine;
 	mine_navigator* navigator;
 	vector<vector<Node>> zones;
+	string start_string;
+
 	int zone_id;
 	Node start;
 	int score;
 
-	genetic_optimizer(int arg_instance, mine_navigator* arg_nav, mine_state *mine,
+	genetic_optimizer(int arg_instance, agent &arg_base_agent,
 					  vector<vector<position>>& arg_zones, int arg_zone_id,
-					  Node start_node, string start_string);
+					  string arg_start_string);
 	~genetic_optimizer();
-	pair<string, Node> solve(int population_size, int generation_max = 5000);
+	string solve(int population_size, int generation_max = 5000);
 
    private:
 	bool eval_solution(const MySolution& p, MyMiddleCost& c);
@@ -55,13 +59,10 @@ class genetic_optimizer {
 struct MySolution {
 	vector<pair<Node, orientation>> node_list;
 
-	pair<string, Node> to_string(genetic_optimizer* optim) const {
-		mine_state mine(&optim->base_mine);
-		Node start = optim->start;
-		agent ag(&mine, optim->navigator, start);
-		Node last_node;
+	string to_string(genetic_optimizer* optim) const {
+		agent ag(optim->base_agent);
 		string res_string = ag.execution_map_from_node_list(node_list);
-		return make_pair(res_string, ag.last_node);
+		return res_string;
 	}
 };
 

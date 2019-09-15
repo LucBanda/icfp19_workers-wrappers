@@ -42,12 +42,12 @@ int main(int argc, char** argv) {
 	int c;
 	int population1 = 3000;
 	int population2 = 7000;
-	int population3 = 3000;
-	int gInstance = 2;
+	int population3 = 2;
+	int gInstance = 3;
 	int region_size = 50;
 	bool perform_partitionning = false;
-	bool perform_ordering = true;
-	bool perform_optimization = false;
+	bool perform_ordering = false;
+	bool perform_optimization = true;
 	bool verbose = false;
 	int popu;
 	bool testbench = false;
@@ -210,13 +210,14 @@ int main(int argc, char** argv) {
 			vector<vector<position>> zone_list =
 				parse_split("./results/order-" + to_string(gInstance) + ".txt");
 			string solution_str = "";
-			Node start_of_zone = nav.initialNode;
+			agent ag(&nav, nav.initialNode);
 			for (int i = 0; i < zone_list.size(); i++) {
-				genetic_optimizer optimizer(gInstance, &nav, nav.mine, zone_list, i,
-											start_of_zone, solution_str);
-				pair<string, Node> pair_sol = optimizer.solve(population3);
-				solution_str = solution_str + pair_sol.first;
-				start_of_zone = pair_sol.second;
+				genetic_optimizer optimizer(gInstance, ag, zone_list, i,
+											solution_str);
+				optimizer.verbose = verbose;
+				string sol = optimizer.solve(population3);
+				solution_str +=  sol;
+				ag.execute_seq(sol);
 				std::ofstream output_file;
 				output_file.open("./results/" + to_string(gInstance) + ".txt",
 								std::ofstream::trunc);

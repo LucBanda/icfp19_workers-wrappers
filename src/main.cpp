@@ -7,13 +7,12 @@
 #include "sys/time.h"
 
 struct main_status {
-	mine_state* mine;
+	agent* ag;
 	string execution_list;
 };
 
 bool idle(void* user_param) {
 	struct main_status* status = (struct main_status*)user_param;
-	mine_state* mine = status->mine;
 	string command = status->execution_list.substr(0, 1);
 	if (command == "B") {
 		int pos = status->execution_list.find(')');
@@ -22,7 +21,7 @@ bool idle(void* user_param) {
 	} else {
 		status->execution_list.erase(0, 1);
 	}
-	mine->apply_command(command);
+	status->ag->execute_seq(command);
 	return false;
 }
 
@@ -41,7 +40,7 @@ int main(int argc, char** argv) {
 	struct main_status status;
 	renderer* render;
 	int c;
-	bool load_result = true;
+	bool load_result = false;
 	int instance = 3;
 	string exec;
 	string fileName = "";
@@ -80,13 +79,10 @@ int main(int argc, char** argv) {
 			padded_filename << "./part-1-initial/prob-" << setw(3)
 							<< setfill('0') << instance << ".desc";
 		mine_state* mine = new mine_state(padded_filename.str());
-
-		mine_state ag_mine(mine);
 		mine_navigator navigator(mine);
-
-		status.mine = mine;
-		render->set_mine(mine);
-		render->set_nav(&navigator);
+		agent ag(&navigator, navigator.robot_pos);
+		status.ag = &ag;
+		render->set_agent(&ag);
 
 		if (load_result) {
 			string execution = parse_result("./results/" + to_string(instance) + ".txt");
@@ -96,12 +92,12 @@ int main(int argc, char** argv) {
 		render->idle_param = &status;
 		render->mainLoop();
 
-		cout << "time_step " << status.mine->time_step << endl;
-		cout << "distance loss " << status.mine->distance_loss << endl;
-		cout << "useful " << status.mine->time_step - status.mine->distance_loss
-			 << endl;
-		cout << status.mine->distance_loss / status.mine->time_step * 100.
-			 << " %" << endl;
+		cout << "time_step " << status.ag->time_step << endl;
+		//cout << "distance loss " << status.mine->distance_loss << endl;
+		//cout << "useful " << status.mine->time_step - status.mine->distance_loss
+		//	 << endl;
+		//cout << status.mine->distance_loss / status.mine->time_step * 100.
+		//	 << " %" << endl;
 
 		delete render;
 		delete mine;

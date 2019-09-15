@@ -22,9 +22,7 @@ enum renderer_mode {
 
 class renderer {
    private:
-	mine_state *mine;
-	mine_navigator *nav;
-
+	agent *ag;
 	void draw();
 
 	double SCALE;
@@ -44,13 +42,17 @@ class renderer {
 	std::function<bool(void *)> idle;
 	void *idle_param;
 	int instance;
+	Graph::Node *source = NULL;
+	Graph::Node *target = NULL;
+	Graph::Arc *arc = NULL;
+
 
 	renderer(int instance);
 	~renderer() {}
 	void mainLoop();
-	void set_mine(mine_state *arg_mine) { mine = arg_mine; }
-	void set_nav(mine_navigator *arg_nav) {
-		nav = arg_nav;
+	//void set_mine(mine_state *arg_mine) { mine = arg_mine; }
+	void set_agent(agent *arg_ag) {
+		ag = arg_ag;
 	}
 	void set_zones(vector<vector<position>> *zone_list) { zones = *zone_list; }
 };

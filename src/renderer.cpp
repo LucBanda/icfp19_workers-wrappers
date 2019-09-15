@@ -35,7 +35,7 @@ renderer::renderer(int arg_instance) {
 	step_it = false;
 	run_under_step = false;
 	idle_param = NULL;
-	nav = NULL;
+	ag = NULL;
 	mode = NAVIGATE;
 	display_text = false;
 	instance = arg_instance;
@@ -46,70 +46,68 @@ renderer::renderer(int arg_instance) {
 
 double start_radius = 0;
 void renderer::draw() {
-	SCALE = max(mine->max_size_x + 2, mine->max_size_y + 2);
+	SCALE = max(ag->navigator->mine->max_size_x + 2, ag->navigator->mine->max_size_y + 2);
 	al_draw_filled_rectangle(0, 0, SCREEN_W, SCREEN_H, BOULDER_COL);
 
-	for (int i = 0; i < mine->max_size_x; i++) {
-		for (int j = 0; j < mine->max_size_y; j++) {
-			if (mine->board[i][j] == WALL) {
-				al_draw_filled_rectangle(
-					TO_SCREEN(position(i, j)),
-					TO_SCREEN(position(i, j) + position(1, 1)),
-					BOULDER_COL);
-			} else if (mine->board[i][j] == EMPTY) {
-				al_draw_filled_rectangle(
-					TO_SCREEN(position(i, j)),
-					TO_SCREEN(position(i, j) + position(1, 1)), WHITE_COL);
-			} else if (mine->board[i][j] == PAINTED) {
-				al_draw_filled_rectangle(
-					TO_SCREEN(position(i, j)),
-					TO_SCREEN(position(i, j) + position(1, 1)), YELLOW_COL);
-			}
+	for (Graph::NodeIt node(ag->navigator->graph); node != INVALID; ++node) {
+		if (!ag->painted_map[node]) {
+			al_draw_filled_rectangle(
+				TO_SCREEN(ag->navigator->coord_map[node]),
+				TO_SCREEN(ag->navigator->coord_map[node] + position(1, 1)), WHITE_COL);
+		} else {
+			al_draw_filled_rectangle(
+				TO_SCREEN(ag->navigator->coord_map[node]),
+				TO_SCREEN(ag->navigator->coord_map[node] + position(1, 1)), YELLOW_COL);
 		}
 	}
 
-	complex<double> robot_centered_pos(mine->robot.real() + 0.5,
-									   mine->robot.imag() + 0.5);
+	complex<double> robot_centered_pos(ag->navigator->coord_map[ag->robot_pos].real() + 0.5,
+									   ag->navigator->coord_map[ag->robot_pos].imag() + 0.5);
 	al_draw_filled_circle(TO_SCREEN(robot_centered_pos), 10 / SHAPE_SCALE,
 						  ME_COL);
-	vector<position> absolute_manipulators = mine->absolute_valid_manipulators();
+	vector<Node> absolute_manipulators = ag->manipulators_valid_nodes();
 	for (auto it: absolute_manipulators) {
 		complex<double> manip_centered_pos(
-			it.real() + 0.5,
-			it.imag() + 0.5);
+			ag->navigator->coord_map[it].real() + 0.5,
+			ag->navigator->coord_map[it].imag() + 0.5);
 		al_draw_circle(TO_SCREEN(manip_centered_pos), 2. / SHAPE_SCALE, ME_COL,
 					   2.);
 	}
 
-	for (auto it = mine->drill_boosters.begin();
-		 it != mine->drill_boosters.end(); ++it) {
-		complex<double> booster_centered_pos(it->real() + 0.5,
-											 it->imag() + 0.5);
-		al_draw_filled_circle(TO_SCREEN(booster_centered_pos), 10 / SHAPE_SCALE,
-							  DRILL_COL);
+	static const map<Booster, ALLEGRO_COLOR> color_map = {
+		{MANIPULATOR, MANIP_COL},
+		{DRILL, DRILL_COL},
+		{FASTWHEEL, FASTWHEEL_COL},
+		{MYSTERE, MYSTERIOUS_COL},
+	};
+
+	for (Graph::NodeIt node(ag->navigator->graph); node != INVALID; ++node) {
+		if (ag->boosters_map[node] != NONE) {
+			complex<double> booster_centered_pos(ag->navigator->coord_map[node].real() + 0.5,
+											 	 ag->navigator->coord_map[node].imag() + 0.5);
+			al_draw_filled_circle(TO_SCREEN(booster_centered_pos), 10 / SHAPE_SCALE,
+							  color_map.at(ag->boosters_map[node]));
+		}
 	}
-	for (auto it = mine->mystere_boosters.begin();
-		 it != mine->mystere_boosters.end(); ++it) {
-		complex<double> booster_centered_pos(it->real() + 0.5,
-											 it->imag() + 0.5);
-		al_draw_filled_circle(TO_SCREEN(booster_centered_pos), 10 / SHAPE_SCALE,
-							  MYSTERIOUS_COL);
+
+	if (source)
+		al_draw_filled_rectangle(
+				TO_SCREEN(ag->navigator->coord_map[*source]),
+				TO_SCREEN(ag->navigator->coord_map[*source] + position(1, 1)), al_map_rgb(0, 255, 0));
+	if (target)
+		al_draw_filled_rectangle(
+				TO_SCREEN(ag->navigator->coord_map[*target]),
+				TO_SCREEN(ag->navigator->coord_map[*target] + position(1, 1)), RED_COL);
+	if (arc) {
+		complex<double> center_1(ag->navigator->coord_map[ag->navigator->graph.source(*arc)].real() + 0.5,
+								 ag->navigator->coord_map[ag->navigator->graph.source(*arc)].imag() + 0.5);
+		complex<double> center_2(ag->navigator->coord_map[ag->navigator->graph.target(*arc)].real() + 0.5,
+								 ag->navigator->coord_map[ag->navigator->graph.target(*arc)].imag() + 0.5);
+		al_draw_line(
+				TO_SCREEN(center_1),
+				TO_SCREEN(center_2), WHITE_COL, 10/SHAPE_SCALE);
 	}
-	for (auto it = mine->fastwheels_boosters.begin();
-		 it != mine->fastwheels_boosters.end(); ++it) {
-		complex<double> booster_centered_pos(it->real() + 0.5,
-											 it->imag() + 0.5);
-		al_draw_filled_circle(TO_SCREEN(booster_centered_pos), 10 / SHAPE_SCALE,
-							  FASTWHEEL_COL);
-	}
-	for (auto it = mine->manipulators_boosters.begin();
-		 it != mine->manipulators_boosters.end(); ++it) {
-		complex<double> booster_centered_pos(it->real() + 0.5,
-											 it->imag() + 0.5);
-		al_draw_filled_circle(TO_SCREEN(booster_centered_pos), 10 / SHAPE_SCALE,
-							  MANIP_COL);
-	}
-	int red = 50;
+	/*int red = 50;
 	int blue = 50;
 	int green = 50;
 	if (mode == ZONES || mode == ORDERED_ZONES) {
@@ -182,7 +180,7 @@ void renderer::draw() {
 				i++;
 			}
 		}
-	}
+	}*/
 }
 
 enum MYKEYS { KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_R };
@@ -326,33 +324,36 @@ void renderer::mainLoop() {
 					break;
 
 				case ALLEGRO_KEY_W:
-					mine->apply_command("W");
+					ag->execute_seq("W");
 					break;
 
 				case ALLEGRO_KEY_S:
-					mine->apply_command("S");
+					ag->execute_seq("S");
 					break;
 
 				case ALLEGRO_KEY_A:
-					mine->apply_command("A");
+					ag->execute_seq("A");
 					break;
 
 				case ALLEGRO_KEY_D:
-					mine->apply_command("D");
+					ag->execute_seq("D");
 					break;
 
 				case ALLEGRO_KEY_Q:
-					mine->apply_command("Q");
+					ag->execute_seq("Q");
 					break;
 
 				case ALLEGRO_KEY_E:
-					mine->apply_command("E");
+					ag->execute_seq("E");
 					break;
 				case ALLEGRO_KEY_N:
 					step_it = !step_it;
 					break;
 				case ALLEGRO_KEY_SPACE:
 					run_under_step = true;
+					break;
+				case ALLEGRO_KEY_0:
+					exit(0);
 					break;
 			}
 		} else {

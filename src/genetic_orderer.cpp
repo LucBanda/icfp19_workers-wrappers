@@ -92,22 +92,18 @@ int genetic_orderer::execute_sequence(const genetic_orderer::MySolution &p, vect
 				for (auto boost:boosters_map[zone])
 					if (boost == MANIPULATOR) {
 						manip_boosters_catches++;
-						//cout << "catch booster" << endl;
 					} else if (boost == FASTWHEEL) {
 						fastwheel_boosters_credit += 50;
 					}
 				for (SmartGraph::IncEdgeIt e(graph, zone); e != INVALID; ++e) {
 					SmartGraph::Node trgt = (graph.v(e) == zone) ? graph.u(e) : graph.v(e);
-					//if (trgt == zone) trgt = graph.u(e);
 					if (filled[trgt])
 						length[e] = cost[e];
-					//else length[e] = cost[e] / 2;
 				}
 			} else {
 				if ((zone != dest)) {
 					auto edge = pathEdges.at(i);
 					path_cost += cost[edge];
-					//cout << length[edge] << endl;;
 				}
 			}
 		}
@@ -292,15 +288,17 @@ genetic_orderer::genetic_orderer(mine_navigator& arg_nav,
 void genetic_orderer::init_node_cost_map() {
 	for (SmartGraph::NodeIt orig(graph); orig != INVALID; ++orig) {
 		for(int i = 0; i < nav.mine->manipulators_boosters.size() + 1; i++) {
-			mine_state fake_mine(nav.mine);
-			fake_mine.robot = nav.coord_map[submine_to_mine_nodes[orig][0]];
-			fake_mine.set_current_nb_of_manipulators(i);
+			//mine_state fake_mine(nav.mine);
+			//fake_mine.robot = nav.coord_map[submine_to_mine_nodes[orig][0]];
+			//fake_mine.set_current_nb_of_manipulators(i);
 			vector<vector<Node>> fake_list_of_nodes;
 			fake_list_of_nodes.push_back(submine_to_mine_nodes[orig]);
 			vector<vector<position>> fake_list_of_position = nav.list_of_coords_from_nodes(fake_list_of_nodes);
-			genetic_optimizer mine_cost_optim(0, &nav, &fake_mine,
-					 fake_list_of_position, 0,
-					 	submine_to_mine_nodes[orig][0], "");
+			agent fake_ag(&nav, nav.initialNode);
+			fake_ag.robot_pos = submine_to_mine_nodes[orig][0];
+			fake_ag.set_current_nb_of_manipulators(i);
+			genetic_optimizer mine_cost_optim(0, fake_ag,
+					 fake_list_of_position, 0, "");
 			vector<Node> zone = submine_to_mine_nodes[orig];
 			int size_of_zone = submine_to_mine_nodes[orig].size();
 			mine_cost_optim.solve(max(size_of_zone * 2, 150), 2);

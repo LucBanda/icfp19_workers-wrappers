@@ -21,6 +21,7 @@ enum orientation {
 class mine_state;
 
 enum Booster {
+	NONE,
 	FASTWHEEL,
 	MANIPULATOR,
 	DRILL,
@@ -29,6 +30,7 @@ enum Booster {
 
 class mine_navigator {
    public:
+
 	mine_navigator(mine_state *mine_base);
 	~mine_navigator(){};
 	void init_graph();
@@ -40,17 +42,19 @@ class mine_navigator {
 		const vector<vector<Node>> list);
 	vector<vector<Node>> node_from_coords(vector<vector<position>> pos_list);
 	Node node_from_coord(position pos);
+	bool is_coord_in_map(position coord);
 
 	string get_orientation(orientation source, orientation target);
 	vector<Booster> boosters_in_node_list(vector<Node> zone);
+	//vector<Node> manipulators_valid_nodes(Node robot_node, orientation orient, int nb_of_manipulators);
 
 	Graph graph;
 	Graph::NodeMap<position> coord_map;
 	Graph::ArcMap<char> direction_map;
-	Graph::ArcMap<enum orientation> orientation_map;
 	Graph::ArcMap<int> length;
+	Graph::NodeMap<Booster> boosters_map;
+
 	Node initialNode;
-	Graph::NodeMap<vector<Node>> ordered_node_map;
 	std::map<int, Node> coord_to_node_map;
 	int max_size_x;
 	Node robot_pos;
@@ -65,9 +69,8 @@ class mine_state {
 	double distance_loss;
 	int time_step;
 	bool is_point_valid(position point, vector<position> *mine_map);
-	string apply_command(string command, bool booster_cb(mine_state *, Booster boost) = NULL);
+	//string apply_command(string command, bool booster_cb(mine_state *, Booster boost) = NULL);
 	vector<string> get_next_valid_command();
-	string strip(string commands);
 	bool board_tile_is_painted(position tile);
 	bool board_tile_is_wall(position tile);
 	bool board_tile_has_booster(position tile);

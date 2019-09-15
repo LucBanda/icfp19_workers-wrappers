@@ -21,8 +21,9 @@ void genetic_optimizer::init_genes(MySolution& p,
 	struct timeval time;
 	gettimeofday(&time, NULL);
 	srand((time.tv_sec) + (time.tv_usec));
-	p.node_list.clear();
+	//p.node_list.clear();
 	vector<Node> list_node = zones[zone_id];
+	p.node_list.reserve(list_node.size());
 	random_shuffle(std::begin(list_node), std::end(list_node), randomfunc);
 	for (int i = 0; i < list_node.size(); i++) {
 		p.node_list.emplace_back(list_node[i], (orientation)(rnd01() * 4));
@@ -30,11 +31,13 @@ void genetic_optimizer::init_genes(MySolution& p,
 }
 
 bool genetic_optimizer::eval_solution(const MySolution& p, MyMiddleCost& c) {
-	mine_state mine(&base_mine);
-	agent executeur(&mine, navigator, start);
+	agent executeur(base_agent);
+	//executeur.execute_seq(start_string);
 	executeur.execution_map_from_node_list(p.node_list);
-	Node exit_node = executeur.last_node;
+	Node exit_node = executeur.robot_pos;
 
+
+	//evalutate cost to next zone
 	int cost_to_next_zone = 0;
 	if (zone_id < zones.size() - 1) {
 		std::vector<Arc> arcpath;
@@ -180,25 +183,23 @@ void genetic_optimizer::SO_report_generation(
 		 << "Generation [" << generation_number << "], " << setprecision(10)
 		 << "Best=" << -last_generation.best_total_cost << ", "
 		 << "Average=" << -last_generation.average_cost << ", "
-		 << "genes size=" << best_genes.to_string(this).first.length() << ", "
+		 << "genes size=" << best_genes.to_string(this).length() << ", "
 		 << "Exe_time=" << last_generation.exe_time << endl;
 }
 
-genetic_optimizer::genetic_optimizer(int arg_instance, mine_navigator* arg_nav, mine_state *mine,
+genetic_optimizer::genetic_optimizer(int arg_instance, agent &arg_base_agent,
 									 vector<vector<position>>& arg_zones,
-									 int arg_zone_id, Node start_node,
-									 string start_string)
-	: base_mine(mine) {
+									 int arg_zone_id,
+									 string arg_start_string):base_agent(arg_base_agent) {
 	instance = arg_instance;
-	start = start_node;
-	navigator = arg_nav;
 	zone_id = arg_zone_id;
-	base_mine.apply_command(start_string);
+	start_string = arg_start_string;
+	navigator = base_agent.navigator;
 	zones = navigator->node_from_coords(arg_zones);
 }
 genetic_optimizer::~genetic_optimizer() {}
 
-pair<string, Node> genetic_optimizer::solve(int population_size, int generation_max) {
+string genetic_optimizer::solve(int population_size, int generation_max) {
 	using namespace std::placeholders;
 
 	EA::Chronometer timer;
@@ -220,12 +221,16 @@ pair<string, Node> genetic_optimizer::solve(int population_size, int generation_
 	ga_obj.mutate = std::bind(&genetic_optimizer::mutate, this, _1, _2, _3);
 	ga_obj.crossover =
 		std::bind(&genetic_optimizer::crossover, this, _1, _2, _3);
-	ga_obj.SO_report_generation =
-		std::bind(&genetic_optimizer::SO_report_generation_empty, this, _1, _2, _3);
+	if (verbose)
+		ga_obj.SO_report_generation =
+			std::bind(&genetic_optimizer::SO_report_generation, this, _1, _2, _3);
+	else
+		ga_obj.SO_report_generation =
+			std::bind(&genetic_optimizer::SO_report_generation_empty, this, _1, _2, _3);
 	ga_obj.crossover_fraction = 0.7;
 	ga_obj.mutation_rate = 0.3;
-	ga_obj.best_stall_max = 20;
-	ga_obj.average_stall_max = 20;
+	ga_obj.best_stall_max = 10;
+	ga_obj.average_stall_max = 5;
 	ga_obj.elite_count = 50;
 	ga_obj.use_quick_search = population_size < 6000;
 

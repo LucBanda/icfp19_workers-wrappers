@@ -7,23 +7,32 @@
 
 class agent {
    public:
-	mine_state *mine;
-	orientation orient_start;
-	Node last_node;
+	Node robot_pos;
+	orientation robot_orientation;
+	mine_navigator *navigator;
+	int time_step;
+	Graph::NodeMap<Booster> boosters_map;
+	Graph::NodeMap<bool> painted_map;
+	int owned_manipulators = 0;
+	int owned_fast_wheels = 0;
+	int owned_drill = 0;
 
-	agent(mine_state *arg_mine, mine_navigator *arg_navigator, Node start);
+	agent(mine_navigator *arg_navigator, Node start);
+	agent(agent &ag);
 	virtual ~agent();
 
 	double get_cost();
 	void step();
-	void set_execution_map(string map);
+	void execute_seq(string seq);
 	string execution_map_from_node_list(vector<pair<Node, orientation>> node_list);
+	void set_current_nb_of_manipulators(int nb);
+
+	vector<Node> manipulators_valid_nodes();
+
+	void paint_valid_nodes();
+	vector<vector<position>> relative_manipulators;
 //	string take_booster(mine_state *mine, Booster boost);
 
-   protected:
-	double initial_targets;
-	string execution_map;
-	mine_navigator *navigator;
 };
 
 #endif
