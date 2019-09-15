@@ -15,14 +15,14 @@
 #include "sys/time.h"
 
 static const vector<tuple<int, int, int, int, int>> testbench_table = {
-	{2, 50, 3000, 5000, 3000},
-	{3, 30, 3000, 5000, 3000},
-	{4, 30, 3000, 5000, 3000},
-	{10, 30, 3000, 5000, 3000},
-	{35, 30, 3000, 5000, 3000},
-	{57, 100, 3000, 5000, 3000},
-	{150, 150, 3000, 5000, 3000},
-	{201, 150, 3000, 5000, 3000},
+	{2, 50, 3000, 10000, 1000},
+	{3, 30, 3000, 10000, 1000},
+	{4, 30, 3000, 10000, 1000},
+	{10, 30, 3000, 10000, 1000},
+	{35, 30, 3000, 10000, 1000},
+	{57, 100, 3000, 10000, 1000},
+	{150, 150, 3000, 10000, 1000},
+	{201, 150, 3000, 10000, 1000},
 };
 
 static void print_help() {
@@ -42,12 +42,12 @@ int main(int argc, char** argv) {
 	int c;
 	int population1 = 3000;
 	int population2 = 7000;
-	int population3 = 2;
+	int population3 = 3000;
 	int gInstance = 3;
 	int region_size = 50;
 	bool perform_partitionning = false;
 	bool perform_ordering = false;
-	bool perform_optimization = true;
+	bool perform_optimization = false;
 	bool verbose = false;
 	int popu;
 	bool testbench = false;

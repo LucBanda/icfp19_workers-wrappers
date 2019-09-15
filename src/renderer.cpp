@@ -107,29 +107,10 @@ void renderer::draw() {
 				TO_SCREEN(center_1),
 				TO_SCREEN(center_2), WHITE_COL, 10/SHAPE_SCALE);
 	}
-	/*int red = 50;
+	int red = 50;
 	int blue = 50;
 	int green = 50;
 	if (mode == ZONES || mode == ORDERED_ZONES) {
-		for (int i = 0; i < mine->max_size_x; i++) {
-			for (int j = 0; j < mine->max_size_y; j++) {
-				position to_screen_pos(TO_SCREEN(position(i, j)));
-				if (mine->board[i][j] == WALL) {
-					al_draw_filled_rectangle(
-						TO_SCREEN(position(i, j)),
-						TO_SCREEN(position(i, j) + position(1, 1)),
-						BOULDER_COL);
-				} else if (mine->board[i][j] == EMPTY) {
-					al_draw_filled_rectangle(
-						TO_SCREEN(position(i, j)),
-						TO_SCREEN(position(i, j) + position(1, 1)), RED_COL);
-				} else if (mine->board[i][j] == PAINTED) {
-					al_draw_filled_rectangle(
-						TO_SCREEN(position(i, j)),
-						TO_SCREEN(position(i, j) + position(1, 1)), RED_COL);
-				}
-			}
-		}
 		vector<vector<position>> &zones_to_use = (mode == ZONES ? zones : ordered_zones);
 		for (auto zone : zones_to_use) {
 			for (auto pixel : zone) {
@@ -180,7 +161,7 @@ void renderer::draw() {
 				i++;
 			}
 		}
-	}*/
+	}
 }
 
 enum MYKEYS { KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_R };

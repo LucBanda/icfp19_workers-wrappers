@@ -1,6 +1,6 @@
 #include "agent.h"
 #include "complex"
-#include "lemon/dijkstra.h"
+#include "lemon/bfs.h"
 #include "renderer.h"
 
 static const vector<vector<position>> manipulators_list = {
@@ -90,17 +90,21 @@ vector<Node> agent::manipulators_valid_nodes() {
 
 void agent::paint_valid_nodes() {
 	position multiplier = pos_multiplier.at(robot_orientation);
-	for (auto mask_list:relative_manipulators) {
+	for (const auto &mask_list:relative_manipulators) {
 		bool should_apply = true;
-		for (auto mask:mask_list) {
-			position mask_pos = mask * multiplier + navigator->coord_map[robot_pos];
-			if (!navigator->is_coord_in_map(mask_pos)) {
+		Node manipulator;
+		for (const auto &mask:mask_list) {
+			Node node_mask = navigator->node_from_coord(mask * multiplier + navigator->coord_map[robot_pos]);
+			if (node_mask == INVALID) {
 				should_apply = false;
+				break;
+			} else if (&mask == &mask_list.front()) {
+				manipulator = node_mask;
 			}
 		}
 		if (should_apply) {
-			position valid_pos = mask_list[0] * multiplier + navigator->coord_map[robot_pos];
-			painted_map[navigator->node_from_coord(valid_pos)] = true;
+			//position valid_pos = mask_list[0] * multiplier + navigator->coord_map[robot_pos];
+			painted_map[manipulator] = true;
 		}
 	}
 }
@@ -205,12 +209,12 @@ string agent::execution_map_from_node_list(vector<pair<Node, orientation>> list_
 		}
 
 		// apply dijkstra to graph
-		Dijkstra<Graph> dijkstra(navigator->graph, navigator->length);
-		dijkstra.run(robot_pos, it->first);
-		auto path = dijkstra.path(it->first);
+		Bfs<Graph> bfs(navigator->graph);
+		bfs.run(robot_pos, it->first);
+		auto path = bfs.path(it->first);
 		vector<Arc> path_forward;
 		path_forward.reserve(path.length());
-		for (Dijkstra<Graph>::Path::RevArcIt e(path); e != INVALID; ++e) {
+		for (Bfs<Graph>::Path::RevArcIt e(path); e != INVALID; ++e) {
 			SmartDigraph::Arc arc = e;
 			path_forward.push_back(arc);
 		}

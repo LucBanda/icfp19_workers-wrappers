@@ -91,21 +91,6 @@ MySolution genetic_optimizer::mutate(const MySolution& X_base,
 	}
 
 	for (int i = 0; i < nb_of_mutations; i++) {
-		/*int swap1 = 0;
-		int swap2 = 0;
-		int minswap, maxswap;
-		double action = rnd01();
-		while (swap1 == swap2) {
-			swap1 = rnd01() * X_base.node_list.size();
-			swap2 = rnd01() * X_base.node_list.size();
-		}
-
-		minswap = min(swap1, swap2);
-		maxswap = max(swap1, swap2);
-
-		if (action < .5) {
-
-		} else {*/
 		swap1 = rnd01() * X_base.node_list.size();
 			pair<Node, orientation> node;
 			node = X_new.node_list[swap1];
@@ -231,7 +216,7 @@ string genetic_optimizer::solve(int population_size, int generation_max) {
 	ga_obj.mutation_rate = 0.3;
 	ga_obj.best_stall_max = 10;
 	ga_obj.average_stall_max = 5;
-	ga_obj.elite_count = 50;
+	ga_obj.elite_count = min(50, population_size);
 	ga_obj.use_quick_search = population_size < 6000;
 
 	ga_obj.solve();

@@ -121,14 +121,12 @@ vector<vector<Node>> mine_navigator::node_from_coords(
 
 
 Node mine_navigator::node_from_coord(position pos) {
-	for (Graph::NodeIt it(graph); it != INVALID; ++it) {
-		if (coord_map[it] == pos)
-			return it;
-	}
-	return INVALID;
+	if (!is_coord_in_map(pos)) return INVALID;
+	return coord_to_node_map.at(pos.imag() * max_size_x + pos.real());
 }
 
 bool mine_navigator::is_coord_in_map(position coord) {
+	if (coord.real() < 0 || coord.imag() < 0 || coord.real() >= mine->max_size_x || coord.imag() >= mine->max_size_y ) return false;
 	return coord_to_node_map.find(mine->max_size_x * coord.imag() + coord.real()) != coord_to_node_map.end();
 }
 

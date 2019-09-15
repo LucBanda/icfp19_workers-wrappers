@@ -19,7 +19,7 @@ typedef EA::GenerationType<MySolution, MyMiddleCost> Generation_Type;
 class genetic_optimizer {
    public:
 	int instance;
-	bool verbose;
+	bool verbose = false;
 	agent &base_agent;
 
 	string filename;
