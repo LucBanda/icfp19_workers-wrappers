@@ -26,8 +26,7 @@ class agent {
 	void execute_seq(string seq);
 	string execution_map_from_node_list(vector<pair<Node, orientation>> node_list);
 	void set_current_nb_of_manipulators(int nb);
-	string goto_next_zone(vector<vector<Node>> zones, int zone_id);
-
+	int cost_to_next_zone(vector<vector<Node>> &zones, int zone_id);
 	vector<Node> manipulators_valid_nodes();
 
 	void paint_valid_nodes();

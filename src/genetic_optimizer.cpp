@@ -34,26 +34,8 @@ bool genetic_optimizer::eval_solution(const MySolution& p, MyMiddleCost& c) {
 	agent executeur(base_agent);
 	//executeur.execute_seq(start_string);
 	executeur.execution_map_from_node_list(p.node_list);
-	Node exit_node = executeur.robot_pos;
+	int cost_to_next_zone = executeur.cost_to_next_zone(zones, zone_id + 1);
 
-
-	//evalutate cost to next zone
-	int cost_to_next_zone = 0;
-	if (zone_id < zones.size() - 1) {
-		std::vector<Arc> arcpath;
-		Dijkstra<Graph> dijkstra(navigator->graph, navigator->length);
-		dijkstra.run(zones[zone_id + 1][0], exit_node);
-
-		// get back path
-		Dijkstra<Graph>::Path path = dijkstra.path(exit_node);
-		for (Dijkstra<Graph>::Path::RevArcIt it(path); it != INVALID;
-			 ++it) {
-			if (find(zones[zone_id + 1].begin(), zones[zone_id + 1].end(),
-					 navigator->graph.source(it)) != zones[zone_id + 1].end())
-				break;
-			cost_to_next_zone++;
-		}
-	}
 	c.objective1 = executeur.get_cost() + cost_to_next_zone;
 
 	return true;  // solution is accepted

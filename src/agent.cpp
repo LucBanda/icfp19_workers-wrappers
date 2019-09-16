@@ -194,6 +194,42 @@ void agent::set_current_nb_of_manipulators(int nb) {
 	}
 }
 
+int agent::cost_to_next_zone(vector<vector<Node>> &zones, int zone_id) {
+	//evalutate cost to next zone
+	int cost_to_next_zone = 0;
+
+	if (zone_id < zones.size()) {
+		std::vector<Arc> arcpath;
+		Bfs<Graph> bfs(navigator->graph);
+
+		Bfs<Graph>::DistMap dist(navigator->graph);
+		Bfs<Graph>::PredMap predmap(navigator->graph);
+		Bfs<Graph>::ProcessedMap processedmap;
+		Bfs<Graph>::ReachedMap reachedmap(navigator->graph);
+
+		bfs.distMap(dist);
+		bfs.predMap(predmap);
+		bfs.processedMap(processedmap);
+		bfs.reachedMap(reachedmap);
+
+		bfs.init();
+		bfs.addSource(robot_pos);
+		Node arrival = INVALID;
+		while (!bfs.emptyQueue() && arrival == INVALID) {
+			Node n = bfs.processNextNode();
+			if (find(zones[zone_id].begin(), zones[zone_id].end(), n) != zones[zone_id].end()) {
+					arrival = n;
+					break;
+			}
+		}
+		if (arrival != INVALID) {
+			cost_to_next_zone = bfs.dist(arrival);
+		}
+	}
+
+	return cost_to_next_zone;
+}
+
 string agent::execution_map_from_node_list(vector<pair<Node, orientation>> list_node) {
 	string result;
 	//for each node in list
@@ -217,6 +253,17 @@ string agent::execution_map_from_node_list(vector<pair<Node, orientation>> list_
 
 		// apply dijkstra to graph
 		Bfs<Graph> bfs(navigator->graph);
+
+		Bfs<Graph>::DistMap dist(navigator->graph);
+		Bfs<Graph>::PredMap predmap(navigator->graph);
+		Bfs<Graph>::ProcessedMap processedmap;
+		Bfs<Graph>::ReachedMap reachedmap(navigator->graph);
+
+		bfs.distMap(dist);
+		bfs.predMap(predmap);
+		bfs.processedMap(processedmap);
+		bfs.reachedMap(reachedmap);
+
 		bfs.run(robot_pos, it->first);
 		auto path = bfs.path(it->first);
 		vector<Arc> path_forward;
@@ -228,8 +275,12 @@ string agent::execution_map_from_node_list(vector<pair<Node, orientation>> list_
 		reverse(path_forward.begin(), path_forward.end());
 		for (auto e:path_forward) {
 			//paint the map, collect the boosters
+			const Node &result_node = navigator->graph.target(e);
+			if (result_node == it->first && painted_map[it->first]) {
+				break;
+			}
 			result += navigator->direction_map[e];
-			robot_pos = navigator->graph.target(e);
+			robot_pos = result_node;
 			time_step++;
 
 			Booster boost = boosters_map[robot_pos];
