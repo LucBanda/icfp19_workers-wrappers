@@ -300,17 +300,17 @@ void genetic_orderer::init_node_cost_map() {
 			genetic_optimizer mine_cost_optim(0, fake_ag,
 					 fake_list_of_position, 0, "");
 			vector<Node> zone = submine_to_mine_nodes[orig];
-			int size_of_zone = submine_to_mine_nodes[orig].size();
-			mine_cost_optim.solve(max(size_of_zone * 2, 150), 2);
+			mine_cost_optim.solve(150, 2);
 			int score = mine_cost_optim.score;
 			if ((node_cost_per_booster_cnt[orig].size() > 0) && score > *(node_cost_per_booster_cnt[orig].end() - 1) -1) {
 				score = *(node_cost_per_booster_cnt[orig].end() -1) -1;
 				//cout << graph.id(orig) << " ";
 			} else {
-				//cout << graph.id(orig) << " ";
+				cout << graph.id(orig) << " ";
 			}
 			node_cost_per_booster_cnt[orig].push_back(score);
 		}
+		cout << endl;
 	}
 	//cout << endl;
 }
@@ -327,7 +327,7 @@ vector<vector<Node>> genetic_orderer::solve(int population_size) {
 
 	GA_Type ga_obj;
 	ga_obj.problem_mode = EA::GA_MODE::SOGA;
-	ga_obj.multi_threading = false;
+	ga_obj.multi_threading = true;
 	ga_obj.dynamic_threading = false;
 	ga_obj.verbose = false;
 	ga_obj.population = population_size;

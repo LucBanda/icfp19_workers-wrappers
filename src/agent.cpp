@@ -20,7 +20,14 @@ static const vector<vector<position>> manipulators_list = {
 	{position (-3,1), position(-1,0), position(-2,1)},
 	{position (4,1), position(1,0), position(2,0), position(2,1), position(3,1)},
 	{position (-4,1), position(-1,0), position(-2,0), position(-2,1), position(-3,1)},
-
+	{position (0, 0)},
+	{position (0, 0)},
+	{position (0, 0)},
+	{position (0, 0)},
+	{position (0, 0)},
+	{position (0, 0)},
+	{position (0, 0)},
+	{position (0, 0)},
 };
 
 agent::agent(mine_navigator *arg_navigator, Node arg_start):
