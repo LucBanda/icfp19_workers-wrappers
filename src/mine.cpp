@@ -9,10 +9,16 @@ static const map<char, Booster> booster_code = {
 	{'X', MYSTERE},   {'B', MANIPULATOR}, {'L', DRILL},
 	{'F', FASTWHEEL}, {'C', CLONE},		  {'R', TELEPORT}};
 
+static const map<char, position> direction_code = {
+	{'W', position(0,1)},
+	{'A', position(-1, 0)},
+	{'D', position(1, 0)},
+	{'S', position(0, -1)}
+};
+
 mine_navigator::mine_navigator(int arg_instance)
 	: coord_map(graph),
 	  direction_map(graph),
-	  length(graph),
 	  boosters_map(graph) {
 	instance = arg_instance;
 	vector<position> mine_map;
@@ -81,27 +87,11 @@ mine_navigator::mine_navigator(int arg_instance)
 	}
 
 	for (NodeIt n(graph); n != INVALID; ++n) {
-		for (NodeIt v(graph); v != INVALID; ++v) {
-			if (coord_map[n] ==
-				position(coord_map[v].real() + 1, coord_map[v].imag())) {
-				Arc e = graph.addArc(v, n);
-				direction_map[e] = 'D';
-				length[e] = 1;
-			} else if (coord_map[n] ==
-					   position(coord_map[v].real() - 1, coord_map[v].imag())) {
-				Arc e = graph.addArc(v, n);
-				direction_map[e] = 'A';
-				length[e] = 1;
-			} else if (coord_map[n] ==
-					   position(coord_map[v].real(), coord_map[v].imag() - 1)) {
-				Arc e = graph.addArc(v, n);
-				direction_map[e] = 'S';
-				length[e] = 1;
-			} else if (coord_map[n] ==
-					   position(coord_map[v].real(), coord_map[v].imag() + 1)) {
-				Arc e = graph.addArc(v, n);
-				direction_map[e] = 'W';
-				length[e] = 1;
+		for (const auto &directionElem:direction_code) {
+			position pos = coord_map[n] + directionElem.second;
+			if (is_coord_in_map(pos)) {
+				Arc e = graph.addArc(node_from_coord(pos), n);
+				direction_map[e] = directionElem.first;
 			}
 		}
 	}

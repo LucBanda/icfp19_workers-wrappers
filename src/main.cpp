@@ -40,8 +40,8 @@ int main(int argc, char** argv) {
 	struct main_status status;
 	renderer* render;
 	int c;
-	bool load_result = true;
-	int instance = 300;
+	bool load_result = false;
+	int instance = 2;
 	string exec;
 	string fileName = "";
 	int start_instance = 0;
@@ -65,7 +65,7 @@ int main(int argc, char** argv) {
 				break;
 		}
 
-	for (int i = start_instance; i < 151; i++) {
+	for (int i = start_instance; i <= 300; i++) {
 		if (do_all) {
 			instance = i;
 		}
@@ -87,11 +87,6 @@ int main(int argc, char** argv) {
 		render->mainLoop();
 
 		cout << "time_step " << status.ag->time_step << endl;
-		//cout << "distance loss " << status.mine->distance_loss << endl;
-		//cout << "useful " << status.mine->time_step - status.mine->distance_loss
-		//	 << endl;
-		//cout << status.mine->distance_loss / status.mine->time_step * 100.
-		//	 << " %" << endl;
 
 		delete render;
 

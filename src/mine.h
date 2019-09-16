@@ -37,7 +37,6 @@ class mine_navigator {
 	Graph graph;
 	Graph::NodeMap<position> coord_map;
 	Graph::ArcMap<char> direction_map;
-	Graph::ArcMap<int> length;
 	Graph::NodeMap<Booster> boosters_map;
 	std::map<Booster, vector<Node>> boosters_lists;
 	Node initialNode;

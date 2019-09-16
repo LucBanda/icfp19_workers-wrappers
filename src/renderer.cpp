@@ -8,7 +8,7 @@
 
 #define MAP_RES 3000
 
-#define BOULDER_COL al_map_rgb(0, 0, 0)
+#define BOULDER_COL al_map_rgb(50, 50, 50)
 #define ME_COL al_map_rgb(200, 0, 0)
 #define FASTWHEEL_COL al_map_rgb(200, 50, 50)
 #define MYSTERIOUS_COL al_map_rgb(50, 50, 200)

@@ -271,10 +271,10 @@ genetic_orderer::genetic_orderer(mine_navigator& arg_nav,
 			for (SmartGraph::NodeIt dest(graph); dest!= INVALID; ++dest) {
 				if (submine_to_mine_nodes[dest] == nb) {
 					SmartGraph::Edge e = graph.addEdge(orig, dest);
-					Dijkstra<Graph> dijkstra(nav.graph, nav.length);
-					dijkstra.run(submine_to_mine_nodes[orig][0],
+					Bfs<Graph> bfs(nav.graph);
+					bfs.run(submine_to_mine_nodes[orig][0],
 								submine_to_mine_nodes[dest][0]);
-					int cost_score = dijkstra.dist(submine_to_mine_nodes[dest][0]);
+					int cost_score = bfs.dist(submine_to_mine_nodes[dest][0]);
 					cost[e] = cost_score;
 				}
 			}
@@ -286,6 +286,8 @@ genetic_orderer::genetic_orderer(mine_navigator& arg_nav,
 
 
 void genetic_orderer::init_node_cost_map() {
+	EA::Chronometer timer;
+	timer.tic();
 	for (SmartGraph::NodeIt orig(graph); orig != INVALID; ++orig) {
 		for(int i = 0; i < nav.boosters_lists[MANIPULATOR].size() + 1; i++) {
 			vector<vector<Node>> fake_list_of_nodes;
@@ -302,14 +304,15 @@ void genetic_orderer::init_node_cost_map() {
 			if ((node_cost_per_booster_cnt[orig].size() > 0) && score > *(node_cost_per_booster_cnt[orig].end() - 1) -1) {
 				score = *(node_cost_per_booster_cnt[orig].end() -1) -1;
 				//cout << graph.id(orig) << " ";
-			} else {
+			} else if (verbose) {
 				cout << graph.id(orig) << " ";
 			}
 			node_cost_per_booster_cnt[orig].push_back(score);
 		}
-		cout << endl;
+		if (verbose)
+			cout << endl;
 	}
-	//cout << endl;
+	cout << "Init cost map done in " << timer.toc() << " s" << endl;
 }
 
 genetic_orderer::~genetic_orderer() {}

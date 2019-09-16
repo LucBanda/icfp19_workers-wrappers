@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
 	int region_size = 50;
 	bool perform_partitionning = false;
 	bool perform_ordering = false;
-	bool perform_optimization = true;
+	bool perform_optimization = false;
 	bool verbose = false;
 	int popu;
 	bool testbench = false;
