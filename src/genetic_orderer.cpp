@@ -57,7 +57,7 @@ int genetic_orderer::execute_sequence(const genetic_orderer::MySolution &p, vect
 	for (auto it = p.split.begin(); it != p.split.end(); ++it) {
 		dest = node_list.at(*it);
 		if (filled[dest] ) {
-			//if next node to visit is filled, do not take it into account
+			//if next zone to visit is filled, do not take it into account
 			continue;
 		}
 		Dijkstra<SmartGraph, SmartGraph::EdgeMap<int>> dijkstra(graph, length);
@@ -80,6 +80,7 @@ int genetic_orderer::execute_sequence(const genetic_orderer::MySolution &p, vect
 		reverse(pathNodes.begin(), pathNodes.end());
 		int path_cost = 0;
 		int zone_cost = 0;
+		pathNodes.push_back(dest);
 		for (int i = 0; i < pathNodes.size(); i++) {
 			auto &zone = pathNodes.at(i);
 			if (!filled[zone]) {
@@ -107,7 +108,6 @@ int genetic_orderer::execute_sequence(const genetic_orderer::MySolution &p, vect
 				}
 			}
 		}
-		if (result) result->push_back(dest);
 		orig = dest;
 		//here we should consider discount of fastwheel
 		result_score += zone_cost + path_cost;
