@@ -26,74 +26,130 @@ enum Booster {
 	MANIPULATOR,
 	DRILL,
 	MYSTERE,
+	CLONE,
+	TELEPORT
 };
 
 class mine_navigator {
    public:
 
-	mine_navigator(mine_state *mine_base);
-	~mine_navigator(){};
-	void init_graph();
-	string goto_node(Node orig, Node target);
-	mine_state *mine;
-
-	vector<Node> get_node_list();
-	vector<vector<position>> list_of_coords_from_nodes(
-		const vector<vector<Node>> list);
-	vector<vector<Node>> node_from_coords(vector<vector<position>> pos_list);
-	Node node_from_coord(position pos);
-	bool is_coord_in_map(position coord);
-
-	string get_orientation(orientation source, orientation target);
-	vector<Booster> boosters_in_node_list(vector<Node> zone);
-	//vector<Node> manipulators_valid_nodes(Node robot_node, orientation orient, int nb_of_manipulators);
-
+	int instance;
 	Graph graph;
 	Graph::NodeMap<position> coord_map;
 	Graph::ArcMap<char> direction_map;
 	Graph::ArcMap<int> length;
 	Graph::NodeMap<Booster> boosters_map;
-
+	std::map<Booster, vector<Node>> boosters_lists;
 	Node initialNode;
+
 	std::map<int, Node> coord_to_node_map;
 	int max_size_x;
-	Node robot_pos;
+	int max_size_y;
+
+	mine_navigator(int instance);
+	~mine_navigator(){};
+
+	vector<vector<position>> list_of_coords_from_nodes(const vector<vector<Node>> &list);
+	vector<vector<Node>> node_from_coords(vector<vector<position>> &pos_list);
+	Node node_from_coord(position pos);
+	bool is_coord_in_map(position coord);
+
+	string get_orientation(orientation source, orientation target);
+	vector<Booster> boosters_in_node_list(vector<Node> &zone);
 };
 
-class mine_state {
-   public:
-	mine_state(mine_state *base_mine);
-	mine_state(string filename);
-	~mine_state();
+static inline string get_next_tuple_token(string *line) {
+	string token;
+	string delimiter = "#";
+	size_t pos = line->find(delimiter);
+	token = line->substr(0, pos);
+	line->erase(0, pos + delimiter.length());
+	return token;
+}
 
-	double distance_loss;
-	int time_step;
-	bool is_point_valid(position point, vector<position> *mine_map);
-	//string apply_command(string command, bool booster_cb(mine_state *, Booster boost) = NULL);
-	vector<string> get_next_valid_command();
-	bool board_tile_is_painted(position tile);
-	bool board_tile_is_wall(position tile);
-	bool board_tile_has_booster(position tile);
-	vector<position> absolute_valid_manipulators();
-	vector<Booster> boosters_in_position_list(vector<position> list);
-	void set_current_nb_of_manipulators(int nb);
+static inline string get_next_tuple_polygon(string *line) {
+	string token;
+	string delimiter = ";";
+	size_t pos = line->find(delimiter);
+	token = line->substr(0, pos);
+	if (pos != line->npos) {
+		line->erase(0, pos + delimiter.length());
+	} else
+		line->erase(0, line->length());
+	return token;
+}
 
-	int non_validated_tiles;
-	enum map_tile **board;
+static inline position parse_position(string positionstring) {
+	string arg1, arg2;
+	string delimiter = ",";
+	size_t delimpos = positionstring.find(delimiter);
+	arg1 = positionstring.substr(1, delimpos - 1);
+	arg2 = positionstring.substr(delimpos + delimiter.length(),
+								 positionstring.length() - delimpos - 2);
+	return position(atoi(arg1.c_str()), atoi(arg2.c_str()));
+}
 
-	position robot;
-	enum orientation current_orientation;
-	vector<vector<position>> relative_manipulators;
-	vector<position> manipulators_boosters;
-	vector<position> fastwheels_boosters;
-	vector<position> drill_boosters;
-	vector<position> mystere_boosters;
-	int owned_manipulators_boosters;
-	int owned_fastwheels_boosters;
-	int owned_drill_boosters;
+static inline vector<position> parse_token_list(string line) {
+	vector<position> list;
+	string t_line = line;
+	string token;
+	string open_delimiter = "(";
+	string token_delimiter = "),(";
+	string close_delimiter = ")";
 
-	vector<vector<position>> obstacles;
-	int max_size_x, max_size_y;
-};
+	size_t tokenpos = 0, tokenend;
+	tokenpos = t_line.find(open_delimiter);
+	tokenend = t_line.find(close_delimiter);
+	while (tokenpos != t_line.npos) {
+		token = t_line.substr(tokenpos, tokenend + 1);
+		list.push_back(parse_position(token));
+		t_line.erase(
+			0, tokenend + close_delimiter.length() + open_delimiter.length());
+		tokenpos = t_line.find(open_delimiter);
+		tokenend = t_line.find(close_delimiter);
+	}
+
+	return list;
+}
+
+static inline vector<vector<position>> parse_list_of_token_lists(string line) {
+	vector<vector<position>> ret;
+	string t_line = line;
+	while (t_line.length() > 0) {
+		ret.push_back(parse_token_list(get_next_tuple_polygon(&t_line)));
+	}
+	return ret;
+}
+
+static inline bool PointInPolygon(position point, vector<position> polygon) {
+	int i, j, nvert = polygon.size();
+	bool c = false;
+
+	for (i = 0, j = nvert - 1; i < nvert; j = i++) {
+		if (((polygon[i].imag() > point.imag()) !=
+			 (polygon[j].imag() > point.imag())) &&
+			(point.real() < (polygon[j].real() - polygon[i].real()) *
+									(point.imag() - polygon[i].imag()) /
+									(polygon[j].imag() - polygon[i].imag()) +
+								polygon[i].real()))
+			c = !c;
+	}
+
+	return c;
+}
+
+
+static inline bool is_point_valid(position point, vector<position> &mine_map, vector<vector<position>> &obstacles) {
+	bool is_valid = false;
+	if (PointInPolygon(point, mine_map)) {
+		is_valid = true;
+		for (auto it = obstacles.begin(); it != obstacles.end(); ++it) {
+			if (PointInPolygon(point, *it)) {
+				is_valid = false;
+			}
+		}
+	}
+	return is_valid;
+}
 
 #endif

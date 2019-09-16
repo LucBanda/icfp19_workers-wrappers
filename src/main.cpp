@@ -40,8 +40,8 @@ int main(int argc, char** argv) {
 	struct main_status status;
 	renderer* render;
 	int c;
-	bool load_result = false;
-	int instance = 3;
+	bool load_result = true;
+	int instance = 300;
 	string exec;
 	string fileName = "";
 	int start_instance = 0;
@@ -73,14 +73,8 @@ int main(int argc, char** argv) {
 		cout << "********* Instance " << instance << "*************" << endl;
 		render = new renderer(instance);
 		ostringstream padded_filename;
-		if (instance == -1)
-			padded_filename << "./part-1-examples/example-01.desc";
-		else
-			padded_filename << "./part-1-initial/prob-" << setw(3)
-							<< setfill('0') << instance << ".desc";
-		mine_state* mine = new mine_state(padded_filename.str());
-		mine_navigator navigator(mine);
-		agent ag(&navigator, navigator.robot_pos);
+		mine_navigator navigator(instance);
+		agent ag(&navigator, navigator.initialNode);
 		status.ag = &ag;
 		render->set_agent(&ag);
 
@@ -100,7 +94,6 @@ int main(int argc, char** argv) {
 		//	 << " %" << endl;
 
 		delete render;
-		delete mine;
 
 		if (!do_all) return 0;
 	}

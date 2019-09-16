@@ -31,7 +31,6 @@ class agent {
 
 	void paint_valid_nodes();
 	vector<vector<position>> relative_manipulators;
-//	string take_booster(mine_state *mine, Booster boost);
 
 };
 

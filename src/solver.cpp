@@ -43,11 +43,11 @@ int main(int argc, char** argv) {
 	int population1 = 3000;
 	int population2 = 7000;
 	int population3 = 3000;
-	int gInstance = 3;
+	int gInstance = 46;
 	int region_size = 50;
 	bool perform_partitionning = false;
 	bool perform_ordering = false;
-	bool perform_optimization = false;
+	bool perform_optimization = true;
 	bool verbose = false;
 	int popu;
 	bool testbench = false;
@@ -135,15 +135,8 @@ int main(int argc, char** argv) {
 		cout << "instance = " << gInstance << ", region_size = " << region_size << ", populations = " << population1 << " " << population2 << " " << population3 << endl;
 		EA::Chronometer main_timer;
 		main_timer.tic();
-		ostringstream padded_filename;
-		if (gInstance == -1)
-			padded_filename << "./part-1-examples/example-01.desc";
-		else
-			padded_filename << "./part-1-initial/prob-" << setw(3)
-							<< setfill('0') << gInstance << ".desc";
 
-		mine_state mine(padded_filename.str());
-		mine_navigator nav(&mine);
+		mine_navigator nav(gInstance);
 		cout << "___________ INSTANCE " << gInstance << " ______________" << endl;
 
 		if (perform_partitionning){

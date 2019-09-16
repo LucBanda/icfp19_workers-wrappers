@@ -235,7 +235,7 @@ genetic_orderer::genetic_orderer(mine_navigator& arg_nav,
 	// starting point
 	vector<Node> start_zone;
 	for (auto zone : zones) {
-		if (find(zone.begin(), zone.end(), nav.robot_pos) != zone.end()) {
+		if (find(zone.begin(), zone.end(), nav.initialNode) != zone.end()) {
 			start_zone = zone;
 		}
 	}
@@ -287,10 +287,7 @@ genetic_orderer::genetic_orderer(mine_navigator& arg_nav,
 
 void genetic_orderer::init_node_cost_map() {
 	for (SmartGraph::NodeIt orig(graph); orig != INVALID; ++orig) {
-		for(int i = 0; i < nav.mine->manipulators_boosters.size() + 1; i++) {
-			//mine_state fake_mine(nav.mine);
-			//fake_mine.robot = nav.coord_map[submine_to_mine_nodes[orig][0]];
-			//fake_mine.set_current_nb_of_manipulators(i);
+		for(int i = 0; i < nav.boosters_lists[MANIPULATOR].size() + 1; i++) {
 			vector<vector<Node>> fake_list_of_nodes;
 			fake_list_of_nodes.push_back(submine_to_mine_nodes[orig]);
 			vector<vector<position>> fake_list_of_position = nav.list_of_coords_from_nodes(fake_list_of_nodes);

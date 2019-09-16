@@ -50,7 +50,6 @@ class renderer {
 	renderer(int instance);
 	~renderer() {}
 	void mainLoop();
-	//void set_mine(mine_state *arg_mine) { mine = arg_mine; }
 	void set_agent(agent *arg_ag) {
 		ag = arg_ag;
 	}

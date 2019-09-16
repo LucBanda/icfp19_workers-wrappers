@@ -10,9 +10,12 @@
 
 #define BOULDER_COL al_map_rgb(0, 0, 0)
 #define ME_COL al_map_rgb(200, 0, 0)
-#define FASTWHEEL_COL al_map_rgb(150, 50, 50)
+#define FASTWHEEL_COL al_map_rgb(200, 50, 50)
 #define MYSTERIOUS_COL al_map_rgb(50, 50, 200)
 #define DRILL_COL al_map_rgb(50, 200, 50)
+#define TELEPORT_COL al_map_rgb(200, 200, 50)
+#define CLONE_COL al_map_rgb(50, 200, 200)
+
 #define MANIP_COL al_map_rgb(220, 220, 0)
 #define WHITE_COL al_map_rgb(250, 250, 250)
 #define YELLOW_COL al_map_rgb(200, 200, 50)
@@ -46,7 +49,7 @@ renderer::renderer(int arg_instance) {
 
 double start_radius = 0;
 void renderer::draw() {
-	SCALE = max(ag->navigator->mine->max_size_x + 2, ag->navigator->mine->max_size_y + 2);
+	SCALE = max(ag->navigator->max_size_x + 2, ag->navigator->max_size_y + 2);
 	al_draw_filled_rectangle(0, 0, SCREEN_W, SCREEN_H, BOULDER_COL);
 
 	for (Graph::NodeIt node(ag->navigator->graph); node != INVALID; ++node) {
@@ -79,6 +82,8 @@ void renderer::draw() {
 		{DRILL, DRILL_COL},
 		{FASTWHEEL, FASTWHEEL_COL},
 		{MYSTERE, MYSTERIOUS_COL},
+		{TELEPORT, TELEPORT_COL},
+		{CLONE, CLONE_COL}
 	};
 
 	for (Graph::NodeIt node(ag->navigator->graph); node != INVALID; ++node) {
