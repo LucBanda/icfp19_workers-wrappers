@@ -275,10 +275,10 @@ string agent::execution_map_from_node_list(vector<pair<Node, orientation>> list_
 		reverse(path_forward.begin(), path_forward.end());
 		for (auto e:path_forward) {
 			//paint the map, collect the boosters
-			const Node &result_node = navigator->graph.target(e);
-			if (result_node == it->first && painted_map[it->first] && boosters_map[it->first] == NONE) {
+			if (painted_map[it->first] && boosters_map[it->first] == NONE) {
 				break;
 			}
+			const Node &result_node = navigator->graph.target(e);
 			result += navigator->direction_map[e];
 			robot_pos = result_node;
 			time_step++;
