@@ -61,6 +61,7 @@ mine_navigator::mine_navigator(int arg_instance)
 		if (max_size_y < it->imag()) max_size_y = it->imag();
 	}
 
+	//create graph nodes
 	for (int i = 0; i < max_size_x; i++) {
 		for (int j = 0; j < max_size_y; j++) {
 			if (is_point_valid(position(i, j), mine_map, obstacles)) {
@@ -86,6 +87,7 @@ mine_navigator::mine_navigator(int arg_instance)
 		}
 	}
 
+	//create graph arcs
 	for (NodeIt n(graph); n != INVALID; ++n) {
 		for (const auto &directionElem:direction_code) {
 			position pos = coord_map[n] + directionElem.second;
@@ -96,6 +98,7 @@ mine_navigator::mine_navigator(int arg_instance)
 		}
 	}
 }
+
 
 vector<Booster> mine_navigator::boosters_in_node_list(vector<Node> &zone) {
 	vector<position> list_pos;

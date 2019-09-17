@@ -25,6 +25,8 @@ class genetic_optimizer {
 	string filename;
 	mine_navigator* navigator;
 	vector<vector<Node>> zones;
+	map<int, vector<Node>> nodes_per_degree;
+
 	string start_string;
 
 	int zone_id;

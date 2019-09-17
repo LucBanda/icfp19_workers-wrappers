@@ -24,9 +24,27 @@ void genetic_optimizer::init_genes(MySolution& p,
 	//p.node_list.clear();
 	vector<Node> list_node = zones[zone_id];
 	p.node_list.reserve(list_node.size());
-	random_shuffle(std::begin(list_node), std::end(list_node), randomfunc);
-	for (int i = 0; i < list_node.size(); i++) {
-		p.node_list.emplace_back(list_node[i], (orientation)(rnd01() * 4));
+	for (int i = 1; i <= 4; i++) {
+		if (nodes_per_degree.find(i) != nodes_per_degree.end()) {
+			vector<Node> list_per_degree = nodes_per_degree[i];
+			random_shuffle(list_per_degree.begin(), list_per_degree.end(), randomfunc);
+			for (const auto& node:list_per_degree) {
+				orientation orient;
+				if (i == 1) {
+					for (Graph::OutArcIt it(navigator->graph, node); it!=INVALID; ++it) {
+						switch (navigator->direction_map[it]) {
+							case 'D': orient = EAST; break;
+							case 'W': orient = NORTH; break;
+							case 'S': orient = SOUTH; break;
+							case 'A': orient = WEST; break;
+						}
+					}
+				} else {
+					orient = (orientation)(rnd01() * 4);
+				}
+				p.node_list.emplace_back(node, orient);
+			}
+		}
 	}
 }
 
@@ -50,7 +68,8 @@ MySolution genetic_optimizer::mutate(const MySolution& X_base,
 	int swap1 = 0;
 	int swap2 = 0;
 	int minswap, maxswap;
-	//double action = rnd01();
+	double action = rnd01();
+
 	while (swap1 == swap2) {
 		swap1 = rnd01() * X_base.node_list.size();
 		swap2 = rnd01() * X_base.node_list.size();
@@ -59,37 +78,18 @@ MySolution genetic_optimizer::mutate(const MySolution& X_base,
 	minswap = min(swap1, swap2);
 	maxswap = max(swap1, swap2);
 
-	MySolution X_input = X_new;
-	X_new.node_list.clear();
-	int i;
-	for (i = 0; i < minswap; i++) {
-		X_new.node_list.push_back(X_input.node_list[i]);
-	}
-	for (i = maxswap - 1; i >= minswap; i--) {
-		X_new.node_list.push_back(X_input.node_list[i]);
-	}
-	for (i = maxswap; i < X_input.node_list.size(); i++) {
-		X_new.node_list.push_back(X_input.node_list[i]);
-	}
-
-	for (int i = 0; i < nb_of_mutations; i++) {
-		swap1 = rnd01() * X_base.node_list.size();
-			pair<Node, orientation> node;
-			node = X_new.node_list[swap1];
+	if (action < .5)
+		reverse(X_new.node_list.begin() + minswap, X_new.node_list.begin() + maxswap);
+	else
+		for (int i = 0; i < nb_of_mutations; i++) {
+			swap1 = rnd01() * X_base.node_list.size();
+			pair<Node, orientation> node = X_new.node_list[swap1];
 			orientation new_orient = (orientation)(
-				(X_new.node_list[swap1].second + (int)(4. * rnd01())) % 4);
+				(node.second + (int)(4. * rnd01())) % 4);
 			X_new.node_list.erase(X_new.node_list.begin() + swap1);
 			X_new.node_list.emplace(X_new.node_list.begin() + swap1, node.first,
 									new_orient);
-
-			node = X_new.node_list[swap2];
-			new_orient = (orientation)(
-				(X_new.node_list[swap2].second + (int)(4. * rnd01())) % 4);
-			X_new.node_list.erase(X_new.node_list.begin() + swap2);
-			X_new.node_list.emplace(X_new.node_list.begin() + swap2, node.first,
-									new_orient);
-		//}
-	}
+		}
 	return X_new;
 }
 
@@ -98,7 +98,7 @@ MySolution genetic_optimizer::crossover(
 	const std::function<double(void)>& rnd01) {
 	MySolution X_new;
 
-
+	X_new.node_list.reserve(X1.node_list.size());
 	int position1 = rnd01() * X1.node_list.size();
 	int position2 = rnd01() * X1.node_list.size();
 	while (position1 == position2) {
@@ -107,11 +107,11 @@ MySolution genetic_optimizer::crossover(
 	}
 	int positionmin = min(position1, position2);
 	int positionmax = max(position1, position2);
-	vector<pair<Node, orientation>> new_nodes;
 	vector<Node> nodes_to_check;
+	nodes_to_check.reserve(X1.node_list.size());
 
 	for (int i = positionmin; i < positionmax; i++) {
-		new_nodes.push_back(X1.node_list[i]);
+		X_new.node_list.push_back(X1.node_list[i]);
 		nodes_to_check.push_back(X1.node_list[i].first);
 	}
 	int j = positionmax;
@@ -127,10 +127,9 @@ MySolution genetic_optimizer::crossover(
 			if (j == (int)X1.node_list.size()) j = 0;
 		}
 		if (i == 0) break;
-		new_nodes.push_back(node);
+		X_new.node_list.push_back(node);
 		nodes_to_check.push_back(node.first);
 	}
-	X_new.node_list = new_nodes;
 	return X_new;
 }
 
@@ -163,6 +162,10 @@ genetic_optimizer::genetic_optimizer(int arg_instance, agent &arg_base_agent,
 	start_string = arg_start_string;
 	navigator = base_agent.navigator;
 	zones = navigator->node_from_coords(arg_zones);
+	for (const auto &node: zones[zone_id]) {
+		int degree = countOutArcs(navigator->graph, node);
+		nodes_per_degree[degree].push_back(node);
+	}
 }
 genetic_optimizer::~genetic_optimizer() {}
 
@@ -196,10 +199,10 @@ string genetic_optimizer::solve(int population_size, int generation_max) {
 			std::bind(&genetic_optimizer::SO_report_generation_empty, this, _1, _2, _3);
 	ga_obj.crossover_fraction = 0.7;
 	ga_obj.mutation_rate = 0.3;
-	ga_obj.best_stall_max = 10;
+	ga_obj.best_stall_max = 100;
 	ga_obj.average_stall_max = 5;
-	ga_obj.elite_count = min(50, population_size);
-	ga_obj.use_quick_search = population_size < 6000;
+	ga_obj.elite_count = min(10, population_size);
+	ga_obj.use_quick_search = population_size < 5000;
 
 	ga_obj.solve();
 	score = ga_obj.last_generation.best_total_cost;

@@ -348,8 +348,8 @@ vector<vector<Node>> genetic_orderer::solve(int population_size) {
 	}
 	ga_obj.crossover_fraction = 0.8;
 	ga_obj.mutation_rate = 0.3;
-	ga_obj.best_stall_max = 30;
-	ga_obj.average_stall_max = 10;
+	ga_obj.best_stall_max = 200;
+	ga_obj.average_stall_max = 5;
 	ga_obj.elite_count = 20;
 	ga_obj.use_quick_search = population_size < 6000;
 

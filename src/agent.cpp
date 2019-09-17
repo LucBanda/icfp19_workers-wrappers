@@ -276,7 +276,7 @@ string agent::execution_map_from_node_list(vector<pair<Node, orientation>> list_
 		for (auto e:path_forward) {
 			//paint the map, collect the boosters
 			const Node &result_node = navigator->graph.target(e);
-			if (result_node == it->first && painted_map[it->first]) {
+			if (result_node == it->first && painted_map[it->first] && boosters_map[it->first] == NONE) {
 				break;
 			}
 			result += navigator->direction_map[e];
