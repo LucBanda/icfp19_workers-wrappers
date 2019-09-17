@@ -5,14 +5,14 @@
 
 static const vector<vector<position>> manipulators_list = {
 	{position(0, 1)}, {position(1,1)}, {position(-1, 1)}, {position(0,0)}, //those are the four default manipulators
-	{position(0,-1)},
 	{position (0,2), position(0, 1)},
-	{position (0,-2), position(0, -1)},
 	{position (0,3), position(0, 2), position(0,1)},
-	{position (0,-3), position(0, -2), position(0, -1)},
 	{position (0,4), position(0,3), position(0, 2), position(0,1)},
-	{position (0,-4), position(0, -3), position(0,-2), position(0, -1)},
 	{position (0, 5), position (0,4), position(0,3), position(0, 2), position(0,1)},
+	{position(0,-1)},
+	{position (0,-2), position(0, -1)},
+	{position (0,-3), position(0, -2), position(0, -1)},
+	{position (0,-4), position(0, -3), position(0,-2), position(0, -1)},
 	{position(0, -5), position (0,-4), position(0, -3), position(0,-2), position(0, -1)},
 	{position(2,1), position(1,1), position(1,0)},
 	{position (-2,1), position(-1,1), position(-1,0)},
@@ -93,6 +93,18 @@ vector<Node> agent::manipulators_valid_nodes() {
 		}
 	}
 	return result;
+}
+
+void agent::set_current_nb_of_manipulators(int nb) {
+	relative_manipulators.clear();
+	relative_manipulators.push_back(manipulators_list[0]);
+	relative_manipulators.push_back(manipulators_list[1]);
+	relative_manipulators.push_back(manipulators_list[2]);
+	relative_manipulators.push_back(manipulators_list[3]);
+	for (int i = 4; i < nb; i++) {
+		relative_manipulators.push_back(manipulators_list[i]);
+		owned_manipulators = nb;
+	}
 }
 
 void agent::paint_valid_nodes() {
@@ -181,18 +193,6 @@ void agent::execute_seq(string command) {
 	}
 }
 
-
-void agent::set_current_nb_of_manipulators(int nb) {
-	relative_manipulators.clear();
-	relative_manipulators.push_back(manipulators_list[0]);
-	relative_manipulators.push_back(manipulators_list[1]);
-	relative_manipulators.push_back(manipulators_list[2]);
-	relative_manipulators.push_back(manipulators_list[3]);
-	for (int i = 4; i < nb; i++) {
-		relative_manipulators.push_back(manipulators_list[i]);
-		owned_manipulators = nb;
-	}
-}
 
 int agent::cost_to_next_zone(vector<vector<Node>> &zones, int zone_id) {
 	//evalutate cost to next zone
