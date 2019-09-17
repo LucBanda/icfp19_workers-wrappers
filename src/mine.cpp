@@ -92,7 +92,7 @@ mine_navigator::mine_navigator(int arg_instance)
 		for (const auto &directionElem:direction_code) {
 			position pos = coord_map[n] + directionElem.second;
 			if (is_coord_in_map(pos)) {
-				Arc e = graph.addArc(node_from_coord(pos), n);
+				Arc e = graph.addArc(n, node_from_coord(pos));
 				direction_map[e] = directionElem.first;
 			}
 		}

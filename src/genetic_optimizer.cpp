@@ -31,7 +31,7 @@ void genetic_optimizer::init_genes(MySolution& p,
 			for (const auto& node:list_per_degree) {
 				orientation orient;
 				if (i == 1) {
-					for (Graph::OutArcIt it(navigator->graph, node); it!=INVALID; ++it) {
+					for (Graph::InArcIt it(navigator->graph, node); it!=INVALID; ++it) {
 						switch (navigator->direction_map[it]) {
 							case 'D': orient = EAST; break;
 							case 'W': orient = NORTH; break;
