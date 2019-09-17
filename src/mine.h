@@ -54,7 +54,7 @@ class mine_navigator {
 	bool is_coord_in_map(position coord);
 
 	string get_orientation(orientation source, orientation target);
-	vector<Booster> boosters_in_node_list(vector<Node> &zone);
+	vector<Booster> boosters_in_node_list(const vector<Node> &zone);
 };
 
 static inline string get_next_tuple_token(string *line) {
@@ -142,8 +142,8 @@ static inline bool is_point_valid(position point, vector<position> &mine_map, ve
 	bool is_valid = false;
 	if (PointInPolygon(point, mine_map)) {
 		is_valid = true;
-		for (auto it = obstacles.begin(); it != obstacles.end(); ++it) {
-			if (PointInPolygon(point, *it)) {
+		for (const auto &it:obstacles) {
+			if (PointInPolygon(point, it)) {
 				is_valid = false;
 			}
 		}

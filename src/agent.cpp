@@ -79,9 +79,9 @@ static const map<orientation, position> pos_multiplier= {
 vector<Node> agent::manipulators_valid_nodes() {
 	vector<Node> result;
 	position multiplier = pos_multiplier.at(robot_orientation);
-	for (auto mask_list:relative_manipulators) {
+	for (const auto &mask_list:relative_manipulators) {
 		bool should_apply = true;
-		for (auto mask:mask_list) {
+		for (const auto &mask:mask_list) {
 			position mask_pos = mask * multiplier + navigator->coord_map[robot_pos];
 			if (!navigator->is_coord_in_map(mask_pos)) {
 				should_apply = false;
@@ -143,7 +143,7 @@ void agent::execute_seq(string command) {
 				string substr = command.substr(pos_x+1, pos_y);
 				int y = stoi(substr);
 				i = pos_y;
-				for (auto boost:manipulators_list) {
+				for (const auto &boost:manipulators_list) {
 					if (boost[0] == position(x,y)) {
 						relative_manipulators.push_back(boost);
 					}
@@ -233,21 +233,21 @@ int agent::cost_to_next_zone(vector<vector<Node>> &zones, int zone_id) {
 string agent::execution_map_from_node_list(vector<pair<Node, orientation>> list_node) {
 	string result;
 	//for each node in list
-	for (auto it = list_node.begin(); it != list_node.end(); ++it) {
+	for (const auto &it:list_node) {
 		//if tile is not painted and has no manipulator
-		if (painted_map[it->first] && boosters_map[it->first] == NONE) {
+		if (painted_map[it.first] && boosters_map[it.first] == NONE) {
 			continue;
 		}
 
 		//orient correctly
-		string new_string = navigator->get_orientation(robot_orientation, it->second);
+		string new_string = navigator->get_orientation(robot_orientation, it.second);
 		time_step += new_string.length();
 		result += new_string;
-		robot_orientation = it->second;
+		robot_orientation = it.second;
 
 		//goto selected node if it is not the current position
 		Arc last_arc;
-		if (robot_pos == it->first) {
+		if (robot_pos == it.first) {
 			continue;
 		}
 
@@ -264,8 +264,8 @@ string agent::execution_map_from_node_list(vector<pair<Node, orientation>> list_
 		bfs.processedMap(processedmap);
 		bfs.reachedMap(reachedmap);
 
-		bfs.run(robot_pos, it->first);
-		auto path = bfs.path(it->first);
+		bfs.run(robot_pos, it.first);
+		auto path = bfs.path(it.first);
 		vector<Arc> path_forward;
 		path_forward.reserve(path.length());
 		for (Bfs<Graph>::Path::RevArcIt e(path); e != INVALID; ++e) {
@@ -273,9 +273,9 @@ string agent::execution_map_from_node_list(vector<pair<Node, orientation>> list_
 			path_forward.push_back(arc);
 		}
 		reverse(path_forward.begin(), path_forward.end());
-		for (auto e:path_forward) {
+		for (const auto &e:path_forward) {
 			//paint the map, collect the boosters
-			if (painted_map[it->first] && boosters_map[it->first] == NONE) {
+			if (painted_map[it.first] && boosters_map[it.first] == NONE) {
 				break;
 			}
 			const Node &result_node = navigator->graph.target(e);

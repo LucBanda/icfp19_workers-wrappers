@@ -15,14 +15,14 @@
 #include "sys/time.h"
 
 static const vector<tuple<int, int, int, int, int>> testbench_table = {
-	{2, 50, 3000, 10000, 3000},
-	{3, 30, 3000, 10000, 3000},
-	{4, 30, 3000, 10000, 3000},
-	{10, 30, 3000, 10000, 3000},
-	{35, 30, 3000, 10000, 3000},
-	{57, 100, 3000, 10000, 3000},
-	{150, 150, 3000, 10000, 3000},
-	{201, 150, 3000, 10000, 3000},
+	{2, 50, 3000, 3000, 3000},
+	{3, 30, 3000, 3000, 3000},
+	{4, 30, 3000, 3000, 3000},
+	{10, 30, 3000, 3000, 3000},
+	{35, 30, 3000, 3000, 3000},
+	{57, 100, 3000, 3000, 3000},
+	{150, 150, 3000, 3000, 3000},
+	{201, 150, 3000, 3000, 3000},
 };
 
 static void print_help() {
@@ -41,7 +41,7 @@ int main(int argc, char** argv) {
 	int start_instance = 0;
 	int c;
 	int population1 = 3000;
-	int population2 = 7000;
+	int population2 = 3000;
 	int population3 = 3000;
 	int gInstance = 46;
 	int region_size = 50;
@@ -99,7 +99,7 @@ int main(int argc, char** argv) {
 		auto_region_size = true;
 		for (int i = start_instance; i < 301; i++) {
 			population1 = 3000;
-			population2 = 5000;
+			population2 = 3000;
 			population3 = 3000;
 			problems.push_back(make_tuple(i, region_size, population1, population2, population3));
 		}
@@ -109,7 +109,7 @@ int main(int argc, char** argv) {
 		perform_ordering = true;
 		perform_optimization = true;
 		auto_region_size = true;
-		for (auto it:testbench_table) {
+		for (const auto &it:testbench_table) {
 			problems.push_back(it);
 		}
 		std::ofstream output_file;
@@ -121,7 +121,7 @@ int main(int argc, char** argv) {
 	}
 	EA::Chronometer timer;
 
-	for (auto problem:problems) {
+	for (const auto &problem:problems) {
 		tie(gInstance, region_size, population1, population2, population3) = problem;
 		if (auto_region_size) {
 			if (gInstance == 2) region_size = 50;
@@ -154,11 +154,11 @@ int main(int argc, char** argv) {
 				nav.list_of_coords_from_nodes(final_sol);
 
 			cout << "sizes = ";
-			for (auto zone : final_sol) cout << zone.size() << " ";
+			for (const auto &zone : final_sol) cout << zone.size() << " ";
 			cout << endl;
 
-			for (auto zone : solution) {
-				for (auto point : zone)
+			for (const auto &zone : solution) {
+				for (const auto &point : zone)
 					output_file << "(" << point.real() << "," << point.imag()
 								<< ")/";
 				output_file << endl;
@@ -185,10 +185,10 @@ int main(int argc, char** argv) {
 							std::ofstream::trunc);
 
 			cout << "sizes = ";
-			for (auto zone : solution) cout << zone.size() << " ";
+			for (const auto &zone : solution) cout << zone.size() << " ";
 			cout << endl;
-			for (auto zone : solution) {
-				for (auto point : zone)
+			for (const auto &zone : solution) {
+				for (const auto &point : zone)
 					output_file << "(" << point.real() << "," << point.imag()
 								<< ")/";
 				output_file << endl;

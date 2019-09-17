@@ -13,7 +13,7 @@ class genetic_orderer {
 
 		string to_string(genetic_orderer* optim) const {
 			ostringstream res;
-			for (auto it : split) {
+			for (const auto &it : split) {
 				res << it << " / ";
 			}
 			return res.str();

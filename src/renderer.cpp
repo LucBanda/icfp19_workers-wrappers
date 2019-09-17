@@ -69,7 +69,7 @@ void renderer::draw() {
 	al_draw_filled_circle(TO_SCREEN(robot_centered_pos), 10 / SHAPE_SCALE,
 						  ME_COL);
 	vector<Node> absolute_manipulators = ag->manipulators_valid_nodes();
-	for (auto it: absolute_manipulators) {
+	for (const auto &it: absolute_manipulators) {
 		complex<double> manip_centered_pos(
 			ag->navigator->coord_map[it].real() + 0.5,
 			ag->navigator->coord_map[it].imag() + 0.5);
@@ -117,8 +117,8 @@ void renderer::draw() {
 	int green = 50;
 	if (mode == ZONES || mode == ORDERED_ZONES) {
 		vector<vector<position>> &zones_to_use = (mode == ZONES ? zones : ordered_zones);
-		for (auto zone : zones_to_use) {
-			for (auto pixel : zone) {
+		for (const auto &zone : zones_to_use) {
+			for (const auto &pixel : zone) {
 				al_draw_filled_rectangle(TO_SCREEN(pixel),
 										 TO_SCREEN(pixel + position(1, 1)),
 										 al_map_rgba(red, green, blue, 255));
@@ -155,7 +155,7 @@ void renderer::draw() {
 		}
 		if (display_text) {
 			int i = 0;
-			for (auto zone : zones_to_use) {
+			for (const auto &zone : zones_to_use) {
 				complex<double> pos_of_center =
 					complex<double>(zone[0].real(), zone[0].imag()) +
 					complex<double>(0.5, 0.5);

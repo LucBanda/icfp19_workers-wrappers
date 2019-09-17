@@ -54,8 +54,8 @@ int genetic_orderer::execute_sequence(const genetic_orderer::MySolution &p, vect
 		length.set(e, cost[e]); // new length if going through a node is approximated to the distance of the centers
 	}
 
-	for (auto it = p.split.begin(); it != p.split.end(); ++it) {
-		dest = node_list.at(*it);
+	for (const auto &it: p.split) {
+		dest = node_list.at(it);
 		if (filled[dest] ) {
 			//if next zone to visit is filled, do not take it into account
 			continue;
@@ -90,7 +90,7 @@ int genetic_orderer::execute_sequence(const genetic_orderer::MySolution &p, vect
 				// from now on, dest is considered validated as well as non validated nodes on the path
 				// update length map for next dijkstras
 				//collect boosters
-				for (auto boost:boosters_map[zone])
+				for (const auto &boost:boosters_map[zone])
 					if (boost == MANIPULATOR) {
 						manip_boosters_catches++;
 					} else if (boost == FASTWHEEL) {
@@ -132,7 +132,9 @@ bool genetic_orderer::eval_solution(const genetic_orderer::MySolution& p,
 genetic_orderer::MySolution genetic_orderer::mutate(
 	const genetic_orderer::MySolution& X_base,
 	const std::function<double(void)>& rnd01, double shrink_scale) {
+
 	MySolution X_new = X_base;
+
 	int swap1 = rnd01() * X_new.split.size();
 	int swap2 = rnd01() * X_new.split.size();
 	while (swap1 == swap2) {
@@ -226,22 +228,22 @@ genetic_orderer::genetic_orderer(mine_navigator& arg_nav,
 	srand((time.tv_sec) + (time.tv_usec));
 	//make the map from node of original graph to zone
 	Graph::NodeMap<vector<Node>> node_to_zone_map(nav.graph);
-	for (auto zone:zones) {
-		for (auto node:zone) {
+	for (const auto zone:zones) {
+		for (const auto &node:zone) {
 			node_to_zone_map[node] = zone;
 		}
 	}
 	// calculate the starting zone by applying dijstra between center nodes and
 	// starting point
 	vector<Node> start_zone;
-	for (auto zone : zones) {
+	for (const auto &zone : zones) {
 		if (find(zone.begin(), zone.end(), nav.initialNode) != zone.end()) {
 			start_zone = zone;
 		}
 	}
 
 	// create graph of zones
-	for (auto zone : zones) {
+	for (const auto &zone : zones) {
 		SmartGraph::Node u = graph.addNode();
 		submine_to_mine_nodes[u] = zone;
 		if (zone != start_zone) {
@@ -255,7 +257,7 @@ genetic_orderer::genetic_orderer(mine_navigator& arg_nav,
 	// calculate adjacent zones with bfs from the center
 	for (SmartGraph::NodeIt orig(graph); orig != INVALID; ++orig) {
 		set<vector<Node>> neighbors;
-		for (auto node:submine_to_mine_nodes[orig]) {
+		for (const auto &node:submine_to_mine_nodes[orig]) {
 			//iterate over all cell of zone, if a neighbor of the cell is not in the current zone, find the zone of the neigbor
 			for(Graph::OutArcIt arc(nav.graph, node); arc != INVALID; ++arc) {
 				auto arc_target = nav.graph.target(arc);
@@ -267,7 +269,7 @@ genetic_orderer::genetic_orderer(mine_navigator& arg_nav,
 			}
 		}
 		//populate edges from neighbors
-		for (auto nb:neighbors) {
+		for (const auto &nb:neighbors) {
 			for (SmartGraph::NodeIt dest(graph); dest!= INVALID; ++dest) {
 				if (submine_to_mine_nodes[dest] == nb) {
 					SmartGraph::Edge e = graph.addEdge(orig, dest);
@@ -299,20 +301,20 @@ void genetic_orderer::init_node_cost_map() {
 			genetic_optimizer mine_cost_optim(0, fake_ag,
 					 fake_list_of_position, 0, "");
 			vector<Node> zone = submine_to_mine_nodes[orig];
-			mine_cost_optim.solve(150, 2);
+			mine_cost_optim.solve(100, 10);
 			int score = mine_cost_optim.score;
-			if ((node_cost_per_booster_cnt[orig].size() > 0) && score > *(node_cost_per_booster_cnt[orig].end() - 1) -1) {
-				score = *(node_cost_per_booster_cnt[orig].end() -1) -1;
-				//cout << graph.id(orig) << " ";
-			} else if (verbose) {
+			if ((node_cost_per_booster_cnt[orig].size() > 0) && score > *(node_cost_per_booster_cnt[orig].end() - 1) -2) {
+				score = *(node_cost_per_booster_cnt[orig].end() -1) - 2;
+				//cout << graph.id(orig) << " fixed " << endl;
+			} else  {
 				cout << graph.id(orig) << " ";
 			}
 			node_cost_per_booster_cnt[orig].push_back(score);
 		}
-		if (verbose)
+		//if (verbose)
 			cout << endl;
 	}
-	cout << "Init cost map done in " << timer.toc() << " s" << endl;
+	//cout << "Init cost map done in " << timer.toc() << " s" << endl;
 }
 
 genetic_orderer::~genetic_orderer() {}
@@ -365,7 +367,7 @@ vector<vector<Node>> genetic_orderer::solve(int population_size) {
 	seq_result.insert(seq_result.begin(), starting_node);
 
 	vector<vector<Node>> result;
-	for (auto n : seq_result) {
+	for (const auto &n : seq_result) {
 		result.push_back(submine_to_mine_nodes[n]);
 	}
 	return result;

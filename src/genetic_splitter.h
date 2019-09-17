@@ -15,7 +15,7 @@ class genetic_graph_splitter {
 
 		string to_string(genetic_graph_splitter* optim) const {
 			ostringstream res;
-			for (auto it : split) {
+			for (const auto &it : split) {
 				res << "(" << optim->graph->id(it.first) << " , " << it.second
 					<< ") / ";
 			}

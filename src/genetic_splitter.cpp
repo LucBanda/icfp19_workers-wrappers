@@ -32,7 +32,7 @@ vector<vector<Node>> genetic_graph_splitter::partition_graph_with_split(
 	Graph::NodeMap<bool> filter(*graph, true);
 	vector<vector<Node>> result_total;
 
-	for (auto patch : loc_split) {
+	for (const auto &patch : loc_split) {
 		auto depth = patch.second;
 		auto node = patch.first;
 		if (filter[node] == true) {
@@ -142,7 +142,7 @@ vector<vector<Node>>& genetic_graph_splitter::fix_solution(
 	Graph::NodeMap<int> zoneMap(*graph);
 
 	for (int i = 0; i < solution.size(); i++) {
-		for (auto n : solution[i]) {
+		for (const auto &n : solution[i]) {
 			filter[n] = false;
 			zoneMap[n] = i;
 		}
@@ -226,7 +226,7 @@ vector<vector<Node>> global_graph_splitter::solve(int population) {
 		sol_nodes = final_sol;
 		final_sol.clear();
 		bool something_done = false;
-		for (auto patch : sol_nodes) {
+		for (const auto &patch : sol_nodes) {
 			if (patch.size() < target_nb_of_nodes_per_zone) {
 				final_sol.push_back(patch);
 				continue;
@@ -237,7 +237,7 @@ vector<vector<Node>> global_graph_splitter::solve(int population) {
 			} else
 				divisor = 4;
 			Graph::NodeMap<bool> filtered(*graph, false);
-			for (auto it : patch) {
+			for (const auto &it : patch) {
 				filtered[it] = true;
 			}
 			something_done = true;
@@ -252,14 +252,14 @@ vector<vector<Node>> global_graph_splitter::solve(int population) {
 			suboptimizer.nb_of_zones = divisor;
 			vector<vector<Node>> subsol_nodes = suboptimizer.solve(population);
 			vector<vector<Node>> mapped_subsol_nodes;
-			for (auto zone : subsol_nodes) {
+			for (const auto &zone : subsol_nodes) {
 				vector<Node> temp_res;
-				for (auto node : zone) {
+				for (const auto &node : zone) {
 					temp_res.push_back(nr[node]);
 				}
 				mapped_subsol_nodes.push_back(temp_res);
 			}
-			for (auto new_patch : mapped_subsol_nodes)
+			for (const auto &new_patch : mapped_subsol_nodes)
 				final_sol.push_back(new_patch);
 		}
 		if (!something_done) {

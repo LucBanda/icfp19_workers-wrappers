@@ -56,9 +56,9 @@ mine_navigator::mine_navigator(int arg_instance)
 	// init variables and graphs
 	max_size_x = 0;
 	max_size_y = 0;
-	for (auto it = mine_map.begin(); it != mine_map.end(); ++it) {
-		if (max_size_x < it->real()) max_size_x = it->real();
-		if (max_size_y < it->imag()) max_size_y = it->imag();
+	for (const auto &it:mine_map) {
+		if (max_size_x < it.real()) max_size_x = it.real();
+		if (max_size_y < it.imag()) max_size_y = it.imag();
 	}
 
 	//create graph nodes
@@ -100,10 +100,10 @@ mine_navigator::mine_navigator(int arg_instance)
 }
 
 
-vector<Booster> mine_navigator::boosters_in_node_list(vector<Node> &zone) {
+vector<Booster> mine_navigator::boosters_in_node_list(const vector<Node> &zone) {
 	vector<position> list_pos;
 	vector<Booster> result;
-	for (auto n : zone) {
+	for (const auto &n : zone) {
 		if (boosters_map[n] != NONE) {
 			result.push_back(boosters_map[n]);
 		}
@@ -114,9 +114,9 @@ vector<Booster> mine_navigator::boosters_in_node_list(vector<Node> &zone) {
 vector<vector<Node>> mine_navigator::node_from_coords(
 	vector<vector<position>> &pos_list) {
 	vector<vector<Node>> result;
-	for (auto zone : pos_list) {
+	for (const auto &zone : pos_list) {
 		vector<Node> result_line;
-		for (auto node : zone) {
+		for (const auto &node : zone) {
 			result_line.push_back(
 				coord_to_node_map[node.imag() * max_size_x + node.real()]);
 		}
@@ -141,9 +141,9 @@ bool mine_navigator::is_coord_in_map(position coord) {
 vector<vector<position>> mine_navigator::list_of_coords_from_nodes(
 	const vector<vector<Node>> &liste) {
 	vector<vector<position>> result;
-	for (auto zone : liste) {
+	for (const auto &zone : liste) {
 		vector<position> interm_result;
-		for (auto n : zone) {
+		for (const auto &n : zone) {
 			interm_result.push_back(coord_map[n]);
 		}
 		result.push_back(interm_result);
