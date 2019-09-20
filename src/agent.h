@@ -5,11 +5,16 @@
 #include "common.h"
 #include "mine.h"
 
+extern const vector<vector<position>> manipulators_list;
+
 class agent {
    public:
 	Node robot_pos;
 	orientation robot_orientation;
-	mine_navigator *navigator;
+	navigator_factory &navigators;
+	//mineGraph *navigator;
+
+	navigator_selector nav_select;
 	int time_step;
 	Graph::NodeMap<Booster> boosters_map;
 	Graph::NodeMap<bool> painted_map;
@@ -17,7 +22,7 @@ class agent {
 	int owned_fast_wheels = 0;
 	int owned_drill = 0;
 
-	agent(mine_navigator *arg_navigator, Node start);
+	agent(navigator_factory &arg_navigator, Node start);
 	agent(agent &ag);
 	virtual ~agent();
 

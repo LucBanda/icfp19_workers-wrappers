@@ -40,14 +40,14 @@ int main(int argc, char** argv) {
 	bool do_all = false;
 	int start_instance = 0;
 	int c;
-	int population1 = 3000;
+	int population1 = 300;
 	int population2 = 3000;
-	int population3 = 3000;
+	int population3 = 100;
 	int gInstance = 46;
 	int region_size = 50;
 	bool perform_partitionning = false;
 	bool perform_ordering = false;
-	bool perform_optimization = false;
+	bool perform_optimization = true;
 	bool verbose = false;
 	int popu;
 	bool testbench = false;
@@ -98,9 +98,9 @@ int main(int argc, char** argv) {
 	if (do_all) {
 		auto_region_size = true;
 		for (int i = start_instance; i < 301; i++) {
-			population1 = 3000;
-			population2 = 3000;
-			population3 = 3000;
+			population1 = 300;
+			population2 = 500;
+			population3 = 100;
 			problems.push_back(make_tuple(i, region_size, population1, population2, population3));
 		}
 	} else if (testbench) {
@@ -136,7 +136,8 @@ int main(int argc, char** argv) {
 		EA::Chronometer main_timer;
 		main_timer.tic();
 
-		mine_navigator nav(gInstance);
+		navigator_factory navigators(gInstance);
+		masked_navigator &nav = navigators.masked_nav;
 		cout << "___________ INSTANCE " << gInstance << " ______________" << endl;
 
 		if (perform_partitionning){
@@ -173,7 +174,7 @@ int main(int argc, char** argv) {
 
 			cout << "************ ORDERING ****************" << endl;
 			timer.tic();
-			genetic_orderer orderer(nav, previous_solution);
+			genetic_orderer orderer(navigators, previous_solution);
 			orderer.verbose = verbose;
 			vector<vector<Node>> ordered_solution = orderer.solve(population2);
 
@@ -203,7 +204,7 @@ int main(int argc, char** argv) {
 			vector<vector<position>> zone_list =
 				parse_split("./results/order-" + to_string(gInstance) + ".txt");
 			string solution_str = "";
-			agent ag(&nav, nav.initialNode);
+			agent ag(navigators, nav.initialNode);
 			for (int i = 0; i < zone_list.size(); i++) {
 				genetic_optimizer optimizer(gInstance, ag, zone_list, i,
 											solution_str);

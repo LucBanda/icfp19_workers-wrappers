@@ -23,7 +23,7 @@ class genetic_optimizer {
 	agent &base_agent;
 
 	string filename;
-	mine_navigator* navigator;
+	mineGraph *navigator;
 	vector<vector<Node>> zones;
 	map<int, vector<Node>> nodes_per_degree;
 

@@ -96,17 +96,18 @@ int genetic_orderer::execute_sequence(const genetic_orderer::MySolution &p, vect
 					} else if (boost == FASTWHEEL) {
 						fastwheel_boosters_credit += 50;
 					}
-				for (SmartGraph::IncEdgeIt e(graph, zone); e != INVALID; ++e) {
-					SmartGraph::Node trgt = (graph.v(e) == zone) ? graph.u(e) : graph.v(e);
-					if (filled[trgt])
-						length[e] = cost[e];
-				}
-			} else {
-				if ((zone != dest)) {
-					auto edge = pathEdges.at(i);
-					path_cost += cost[edge];
-				}
 			}
+			for (SmartGraph::IncEdgeIt e(graph, zone); e != INVALID; ++e) {
+				SmartGraph::Node trgt = (graph.v(e) == zone) ? graph.u(e) : graph.v(e);
+				if (filled[trgt])
+					length[e] = cost[e];
+				else length[e] = cost[e] /2;
+			}
+			if ((zone != dest)) {
+				auto edge = pathEdges.at(i);
+				path_cost += cost[edge];
+			}
+
 		}
 		orig = dest;
 		//here we should consider discount of fastwheel
@@ -219,10 +220,11 @@ void genetic_orderer::SO_report_generation(
 
 }
 
-genetic_orderer::genetic_orderer(mine_navigator& arg_nav,
+genetic_orderer::genetic_orderer(navigator_factory& arg_navigators,
 								 vector<vector<Node>>& zones)
-	: nav(arg_nav), submine_to_mine_nodes(graph), boosters_map(graph), cost(graph), node_cost_per_booster_cnt(graph)  {
+	: navigators(arg_navigators), submine_to_mine_nodes(graph), boosters_map(graph), cost(graph), node_cost_per_booster_cnt(graph)  {
 
+	masked_navigator &nav = navigators.masked_nav;
 	struct timeval time;
 	gettimeofday(&time, NULL);
 	srand((time.tv_sec) + (time.tv_usec));
@@ -251,7 +253,7 @@ genetic_orderer::genetic_orderer(mine_navigator& arg_nav,
 		}
 		else
 			starting_node = u;
-		boosters_map[u] = arg_nav.boosters_in_node_list(zone);
+		boosters_map[u] = nav.boosters_in_node_list(zone);
 	}
 
 	// calculate adjacent zones with bfs from the center
@@ -288,31 +290,33 @@ genetic_orderer::genetic_orderer(mine_navigator& arg_nav,
 
 
 void genetic_orderer::init_node_cost_map() {
+	masked_navigator &nav = navigators.masked_nav;
 	EA::Chronometer timer;
 	timer.tic();
 	for (SmartGraph::NodeIt orig(graph); orig != INVALID; ++orig) {
 		for(int i = 0; i < nav.boosters_lists[MANIPULATOR].size() + 1; i++) {
-			vector<vector<Node>> fake_list_of_nodes;
+			/*vector<vector<Node>> fake_list_of_nodes;
 			fake_list_of_nodes.push_back(submine_to_mine_nodes[orig]);
 			vector<vector<position>> fake_list_of_position = nav.list_of_coords_from_nodes(fake_list_of_nodes);
-			agent fake_ag(&nav, nav.initialNode);
+			agent fake_ag(navigators, nav.initialNode);
 			fake_ag.robot_pos = submine_to_mine_nodes[orig][0];
 			fake_ag.set_current_nb_of_manipulators(i);
 			genetic_optimizer mine_cost_optim(0, fake_ag,
 					 fake_list_of_position, 0, "");
 			vector<Node> zone = submine_to_mine_nodes[orig];
-			mine_cost_optim.solve(100, 10);
+			mine_cost_optim.solve(200, 2);
 			int score = mine_cost_optim.score;
 			if ((node_cost_per_booster_cnt[orig].size() > 0) && score > *(node_cost_per_booster_cnt[orig].end() - 1) -2) {
-				score = *(node_cost_per_booster_cnt[orig].end() -1) - 2;
+				score = *(node_cost_per_booster_cnt[orig].end() -1) -2;
 				//cout << graph.id(orig) << " fixed " << endl;
 			} else  {
 				cout << graph.id(orig) << " ";
-			}
+			}*/
+			int score = submine_to_mine_nodes[orig].size() - (i * submine_to_mine_nodes[orig].size() / 20.);
 			node_cost_per_booster_cnt[orig].push_back(score);
 		}
 		//if (verbose)
-			cout << endl;
+			//cout << endl;
 	}
 	//cout << "Init cost map done in " << timer.toc() << " s" << endl;
 }

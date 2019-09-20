@@ -3,16 +3,16 @@
 #include "lemon/bfs.h"
 #include "renderer.h"
 
-static const vector<vector<position>> manipulators_list = {
+const vector<vector<position>> manipulators_list = {
 	{position(0, 1)}, {position(1,1)}, {position(-1, 1)}, {position(0,0)}, //those are the four default manipulators
+	{position(0,-1)},
+	{position (0,-2), position(0, -1)},
 	{position (0,2), position(0, 1)},
+	{position (0,-3), position(0, -2), position(0, -1)},
+	{position (0,-4), position(0, -3), position(0,-2), position(0, -1)},
 	{position (0,3), position(0, 2), position(0,1)},
 	{position (0,4), position(0,3), position(0, 2), position(0,1)},
 	{position (0, 5), position (0,4), position(0,3), position(0, 2), position(0,1)},
-	{position(0,-1)},
-	{position (0,-2), position(0, -1)},
-	{position (0,-3), position(0, -2), position(0, -1)},
-	{position (0,-4), position(0, -3), position(0,-2), position(0, -1)},
 	{position(0, -5), position (0,-4), position(0, -3), position(0,-2), position(0, -1)},
 	{position(2,1), position(1,1), position(1,0)},
 	{position (-2,1), position(-1,1), position(-1,0)},
@@ -30,12 +30,14 @@ static const vector<vector<position>> manipulators_list = {
 	{position (0, 0)},
 };
 
-agent::agent(mine_navigator *arg_navigator, Node arg_start):
-	boosters_map(arg_navigator->graph),
-	painted_map(arg_navigator->graph, false) {
-	navigator = arg_navigator;
-	for (Graph::NodeIt it(navigator->graph); it!= INVALID; ++it) {
-		boosters_map[it] = arg_navigator->boosters_map[it];
+agent::agent(navigator_factory &arg_navigators, Node arg_start):
+	navigators(arg_navigators),
+	nav_select(navigators),
+	boosters_map(arg_navigators.full_nav.graph),
+	painted_map(arg_navigators.full_nav.graph, false) {
+
+	for (Graph::NodeIt it(nav_select.base_nav->graph); it!= INVALID; ++it) {
+		boosters_map[it] = nav_select.base_nav->boosters_map[it];
 	}
 	robot_orientation = EAST;
 	robot_pos = arg_start;
@@ -51,10 +53,11 @@ agent::agent(mine_navigator *arg_navigator, Node arg_start):
 }
 
 agent::agent(agent &ag):
-	boosters_map(ag.navigator->graph),
-	painted_map(ag.navigator->graph, false) {
-	navigator = ag.navigator;
-	for (Graph::NodeIt it(navigator->graph); it!= INVALID; ++it) {
+	navigators(ag.navigators),
+	nav_select(ag.nav_select),
+	boosters_map(nav_select.base_nav->graph),
+	painted_map(nav_select.base_nav->graph, false) {
+	for (Graph::NodeIt it(nav_select.base_nav->graph); it!= INVALID; ++it) {
 		boosters_map[it] = ag.boosters_map[it];
 		painted_map[it] = ag.painted_map[it];
 	}
@@ -82,14 +85,14 @@ vector<Node> agent::manipulators_valid_nodes() {
 	for (const auto &mask_list:relative_manipulators) {
 		bool should_apply = true;
 		for (const auto &mask:mask_list) {
-			position mask_pos = mask * multiplier + navigator->coord_map[robot_pos];
-			if (!navigator->is_coord_in_map(mask_pos)) {
+			position mask_pos = mask * multiplier + nav_select.base_nav->coord_map[robot_pos];
+			if (!nav_select.navigators.masked_nav.is_coord_in_map(mask_pos)) {
 				should_apply = false;
 			}
 		}
 		if (should_apply) {
-			position valid_pos = mask_list[0] * multiplier + navigator->coord_map[robot_pos];
-			result.push_back(navigator->node_from_coord(valid_pos));
+			position valid_pos = mask_list[0] * multiplier + nav_select.base_nav->coord_map[robot_pos];
+			result.push_back(nav_select.base_nav->node_from_coord(valid_pos));
 		}
 	}
 	return result;
@@ -113,7 +116,7 @@ void agent::paint_valid_nodes() {
 		bool should_apply = true;
 		Node manipulator;
 		for (const auto &mask:mask_list) {
-			Node node_mask = navigator->node_from_coord(mask * multiplier + navigator->coord_map[robot_pos]);
+			Node node_mask = nav_select.navigators.masked_nav.node_from_coord(mask * multiplier + nav_select.base_nav->coord_map[robot_pos]);
 			if (node_mask == INVALID) {
 				should_apply = false;
 				break;
@@ -135,18 +138,43 @@ void agent::execute_seq(string command) {
 			case 'S':
 			case 'A':
 			case 'D':
-				for(Graph::OutArcIt arc(navigator->graph, robot_pos); arc != INVALID; ++arc) {
-					if (navigator->direction_map[arc] == command[i]) {
-						auto arc_target = navigator->graph.target(arc);
-						robot_pos = arc_target;
+				for (int j = 0; j < (1 + (nav_select.current_mode == FAST_MODE || nav_select.current_mode == FAST_DRILL_MODE)); j++) {
+					Node moving_node = nav_select.moving_nav->from_full_graph_nodes[robot_pos];
+					for(Graph::OutArcIt arc(nav_select.moving_nav->graph, moving_node); arc != INVALID; ++arc) {
+						if (nav_select.moving_nav->direction_map[arc] == command[i]) {
+							auto arc_target = nav_select.moving_nav->graph.target(arc);
+							robot_pos = nav_select.moving_nav->to_full_graph_nodes[arc_target];
+						}
 					}
+					Booster boost = boosters_map[robot_pos];
+					if (boost != NONE) {
+						boosters_map[robot_pos] = NONE;
+						switch (boost) {
+						case MANIPULATOR: {
+							owned_manipulators ++;
+							break;
+						}
+						case DRILL:
+							owned_drill ++;
+							break;
+						case FASTWHEEL:
+							owned_fast_wheels ++;
+							break;
+						default:
+							break;
+						}
+					}
+					paint_valid_nodes();
 				}
 				time_step++;
+				nav_select.step();
 				break;
 			case 'E':
 				robot_orientation = (enum orientation)((robot_orientation + 1) % 4);
 				//result += command[i];
+				paint_valid_nodes();
 				time_step++;
+				nav_select.step();
 				break;
 			case'B': {
 				int pos_x = command.find(',', i);
@@ -160,6 +188,9 @@ void agent::execute_seq(string command) {
 						relative_manipulators.push_back(boost);
 					}
 				}
+				paint_valid_nodes();
+				time_step++;
+				nav_select.step();
 				//result += "B(" + to_string(x) + ","+ to_string(y) + ")";
 				break;
 			}
@@ -168,28 +199,23 @@ void agent::execute_seq(string command) {
 				robot_orientation = (enum orientation)(
 					robot_orientation == NORTH ? WEST : robot_orientation - 1);
 				time_step++;
+				nav_select.step();
+				paint_valid_nodes();
 				//result += command[i];
 				break;
+			case 'F':
+				if (owned_fast_wheels > 0) {
+					nav_select.activate_boost(FASTWHEEL);
+					owned_fast_wheels--;
+				}
+				break;
+			case 'L':
+				if (owned_drill > 0) {
+					nav_select.activate_boost(DRILL);
+					owned_drill--;
+				}
+				break;
 		}
-		Booster boost = boosters_map[robot_pos];
-		if (boost != NONE) {
-			boosters_map[robot_pos] = NONE;
-			switch (boost) {
-			case MANIPULATOR: {
-				owned_manipulators ++;
-				break;
-			}
-			case DRILL:
-				owned_drill ++;
-				break;
-			case FASTWHEEL:
-				owned_fast_wheels ++;
-				break;
-			default:
-				break;
-			}
-		}
-		paint_valid_nodes();
 	}
 }
 
@@ -200,12 +226,12 @@ int agent::cost_to_next_zone(vector<vector<Node>> &zones, int zone_id) {
 
 	if (zone_id < zones.size()) {
 		std::vector<Arc> arcpath;
-		Bfs<Graph> bfs(navigator->graph);
+		Bfs<Graph> bfs(nav_select.navigating_nav->graph);
 
-		Bfs<Graph>::DistMap dist(navigator->graph);
-		Bfs<Graph>::PredMap predmap(navigator->graph);
+		Bfs<Graph>::DistMap dist(nav_select.navigating_nav->graph);
+		Bfs<Graph>::PredMap predmap(nav_select.navigating_nav->graph);
 		Bfs<Graph>::ProcessedMap processedmap;
-		Bfs<Graph>::ReachedMap reachedmap(navigator->graph);
+		Bfs<Graph>::ReachedMap reachedmap(nav_select.navigating_nav->graph);
 
 		bfs.distMap(dist);
 		bfs.predMap(predmap);
@@ -230,6 +256,17 @@ int agent::cost_to_next_zone(vector<vector<Node>> &zones, int zone_id) {
 	return cost_to_next_zone;
 }
 
+string get_orientation(orientation source, orientation target) {
+	string result;
+	if (source == (orientation)((target + 1) % 4)) {
+		result = "Q";
+	} else if ((orientation)((source + 1) % 4) == target) {
+		result = "E";
+	} else if (source != target)
+		result = "QQ";
+	return result;
+}
+
 string agent::execution_map_from_node_list(vector<pair<Node, orientation>> list_node) {
 	string result;
 	//for each node in list
@@ -240,24 +277,22 @@ string agent::execution_map_from_node_list(vector<pair<Node, orientation>> list_
 		}
 
 		//orient correctly
-		string new_string = navigator->get_orientation(robot_orientation, it.second);
-		time_step += new_string.length();
+		string new_string = get_orientation(robot_orientation, it.second);
 		result += new_string;
-		robot_orientation = it.second;
+		execute_seq(new_string);
 
 		//goto selected node if it is not the current position
-		Arc last_arc;
 		if (robot_pos == it.first) {
 			continue;
 		}
 
 		// apply dijkstra to graph
-		Bfs<Graph> bfs(navigator->graph);
+		Bfs<Graph> bfs(nav_select.navigating_nav->graph);
 
-		Bfs<Graph>::DistMap dist(navigator->graph);
-		Bfs<Graph>::PredMap predmap(navigator->graph);
+		Bfs<Graph>::DistMap dist(nav_select.navigating_nav->graph);
+		Bfs<Graph>::PredMap predmap(nav_select.navigating_nav->graph);
 		Bfs<Graph>::ProcessedMap processedmap;
-		Bfs<Graph>::ReachedMap reachedmap(navigator->graph);
+		Bfs<Graph>::ReachedMap reachedmap(nav_select.navigating_nav->graph);
 
 		bfs.distMap(dist);
 		bfs.predMap(predmap);
@@ -278,10 +313,11 @@ string agent::execution_map_from_node_list(vector<pair<Node, orientation>> list_
 			if (painted_map[it.first] && boosters_map[it.first] == NONE) {
 				break;
 			}
-			const Node &result_node = navigator->graph.target(e);
-			result += navigator->direction_map[e];
+			const Node &result_node = nav_select.navigating_nav->graph.target(e);
+			result += nav_select.navigating_nav->direction_map[e];
 			robot_pos = result_node;
 			time_step++;
+			nav_select.step();
 
 			Booster boost = boosters_map[robot_pos];
 			if (boost != NONE) {

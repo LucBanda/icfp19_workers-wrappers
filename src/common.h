@@ -16,6 +16,7 @@
 #include <unistd.h>
 #include <lemon/adaptors.h>
 #include <lemon/maps.h>
+#include <iomanip>
 
 using namespace std;
 using namespace lemon;

@@ -31,7 +31,7 @@ class genetic_orderer {
 
    public:
 	SmartGraph graph;
-	mine_navigator& nav;
+	navigator_factory &navigators;
 	vector<vector<Node>> zones;
 	string output_filename;
 
@@ -44,7 +44,7 @@ class genetic_orderer {
 	SmartGraph::Node starting_node;
 	bool verbose;
 
-	genetic_orderer(mine_navigator& arg_nav, vector<vector<Node>> &arg_zones);
+	genetic_orderer(navigator_factory& arg_navigators, vector<vector<Node>> &arg_zones);
 	~genetic_orderer();
 	void init_node_cost_map();
 	vector<vector<Node>> solve(int population_size);

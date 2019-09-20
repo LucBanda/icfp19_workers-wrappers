@@ -24,6 +24,12 @@ void genetic_optimizer::init_genes(MySolution& p,
 	//p.node_list.clear();
 	vector<Node> list_node = zones[zone_id];
 	p.node_list.reserve(list_node.size());
+	/*for (const auto it: list_node) {
+		if (navigator->boosters_map[it] == MANIPULATOR) {
+			orientation orient = (orientation)(rnd01() * 4);
+			p.node_list.emplace_back(it, orient);
+		}
+	}*/
 	for (int i = 1; i <= 4; i++) {
 		if (nodes_per_degree.find(i) != nodes_per_degree.end()) {
 			vector<Node> list_per_degree = nodes_per_degree[i];
@@ -160,7 +166,7 @@ genetic_optimizer::genetic_optimizer(int arg_instance, agent &arg_base_agent,
 	instance = arg_instance;
 	zone_id = arg_zone_id;
 	start_string = arg_start_string;
-	navigator = base_agent.navigator;
+	navigator = base_agent.nav_select.navigating_nav;
 	zones = navigator->node_from_coords(arg_zones);
 	for (const auto &node: zones[zone_id]) {
 		int degree = countOutArcs(navigator->graph, node);
@@ -199,7 +205,7 @@ string genetic_optimizer::solve(int population_size, int generation_max) {
 			std::bind(&genetic_optimizer::SO_report_generation_empty, this, _1, _2, _3);
 	ga_obj.crossover_fraction = 0.7;
 	ga_obj.mutation_rate = 0.3;
-	ga_obj.best_stall_max = 100;
+	ga_obj.best_stall_max = 20;
 	ga_obj.average_stall_max = 5;
 	ga_obj.elite_count = min(10, population_size);
 	ga_obj.use_quick_search = population_size < 5000;

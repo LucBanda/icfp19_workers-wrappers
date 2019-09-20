@@ -38,7 +38,6 @@ static void print_help() {
 int main(int argc, char** argv) {
 	bool do_all = false;
 	struct main_status status;
-	renderer* render;
 	int c;
 	bool load_result = false;
 	int instance = 2;
@@ -71,26 +70,26 @@ int main(int argc, char** argv) {
 		}
 
 		cout << "********* Instance " << instance << "*************" << endl;
-		render = new renderer(instance);
 		ostringstream padded_filename;
-		mine_navigator navigator(instance);
-		agent ag(&navigator, navigator.initialNode);
+		navigator_factory navigators(instance);
+
+		agent ag(navigators, navigators.full_nav.initialNode);
+		renderer render(instance);
+
 		status.ag = &ag;
-		render->set_agent(&ag);
+		render.set_agent(&ag);
 
 		if (load_result) {
 			string execution = parse_result("./results/" + to_string(instance) + ".txt");
 			status.execution_list = execution;
 		}
-		render->idle = &idle;
-		render->idle_param = &status;
-		render->mainLoop();
+		render.idle = &idle;
+		render.idle_param = &status;
 
+		render.mainLoop();
 		cout << "time_step " << status.ag->time_step << endl;
 
-		delete render;
-
-		if (!do_all) return 0;
+		if (!do_all) break;
 	}
 	return 0;
 }

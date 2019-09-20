@@ -9,6 +9,7 @@
 #include "allegro5/allegro_ttf.h"
 #include "common.h"
 #include "mine.h"
+#include "agent.h"
 
 #ifndef START_TIMER
 #define START_TIMER 0
@@ -45,7 +46,6 @@ class renderer {
 	Graph::Node *source = NULL;
 	Graph::Node *target = NULL;
 	Graph::Arc *arc = NULL;
-
 
 	renderer(int instance);
 	~renderer() {}

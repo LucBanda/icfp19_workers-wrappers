@@ -24,7 +24,7 @@
 #define TO_SCREEN(c) \
 	SCREEN_W *(real(c) + 1) / SCALE, SCREEN_H - SCREEN_H *(imag(c) + 1) / SCALE
 
-#define SHAPE_SCALE 1.
+#define SHAPE_SCALE 2.
 const int SCREEN_W = 2000. / SHAPE_SCALE;
 const int SCREEN_H = 2000. / SHAPE_SCALE;
 
@@ -49,30 +49,30 @@ renderer::renderer(int arg_instance) {
 
 double start_radius = 0;
 void renderer::draw() {
-	SCALE = max(ag->navigator->max_size_x + 2, ag->navigator->max_size_y + 2);
+	SCALE = max(ag->nav_select.base_nav->max_size_x + 2, ag->nav_select.base_nav->max_size_y + 2);
 	al_draw_filled_rectangle(0, 0, SCREEN_W, SCREEN_H, BOULDER_COL);
 
-	for (Graph::NodeIt node(ag->navigator->graph); node != INVALID; ++node) {
-		if (!ag->painted_map[node]) {
+	for (Graph::NodeIt node(ag->nav_select.navigators.masked_nav.graph); node != INVALID; ++node) {
+		if (!ag->painted_map[ag->nav_select.base_nav->to_full_graph_nodes[node]]) {
 			al_draw_filled_rectangle(
-				TO_SCREEN(ag->navigator->coord_map[node]),
-				TO_SCREEN(ag->navigator->coord_map[node] + position(1, 1)), WHITE_COL);
+				TO_SCREEN(ag->nav_select.navigators.masked_nav.coord_map[node]),
+				TO_SCREEN(ag->nav_select.navigators.masked_nav.coord_map[node] + position(1, 1)), WHITE_COL);
 		} else {
 			al_draw_filled_rectangle(
-				TO_SCREEN(ag->navigator->coord_map[node]),
-				TO_SCREEN(ag->navigator->coord_map[node] + position(1, 1)), YELLOW_COL);
+				TO_SCREEN(ag->nav_select.navigators.masked_nav.coord_map[node]),
+				TO_SCREEN(ag->nav_select.navigators.masked_nav.coord_map[node] + position(1, 1)), YELLOW_COL);
 		}
 	}
 
-	complex<double> robot_centered_pos(ag->navigator->coord_map[ag->robot_pos].real() + 0.5,
-									   ag->navigator->coord_map[ag->robot_pos].imag() + 0.5);
+	complex<double> robot_centered_pos(ag->nav_select.base_nav->coord_map[ag->robot_pos].real() + 0.5,
+									   ag->nav_select.base_nav->coord_map[ag->robot_pos].imag() + 0.5);
 	al_draw_filled_circle(TO_SCREEN(robot_centered_pos), 10 / SHAPE_SCALE,
 						  ME_COL);
 	vector<Node> absolute_manipulators = ag->manipulators_valid_nodes();
 	for (const auto &it: absolute_manipulators) {
 		complex<double> manip_centered_pos(
-			ag->navigator->coord_map[it].real() + 0.5,
-			ag->navigator->coord_map[it].imag() + 0.5);
+			ag->nav_select.base_nav->coord_map[it].real() + 0.5,
+			ag->nav_select.base_nav->coord_map[it].imag() + 0.5);
 		al_draw_circle(TO_SCREEN(manip_centered_pos), 2. / SHAPE_SCALE, ME_COL,
 					   2.);
 	}
@@ -86,10 +86,10 @@ void renderer::draw() {
 		{CLONE, CLONE_COL}
 	};
 
-	for (Graph::NodeIt node(ag->navigator->graph); node != INVALID; ++node) {
+	for (Graph::NodeIt node(ag->nav_select.base_nav->graph); node != INVALID; ++node) {
 		if (ag->boosters_map[node] != NONE) {
-			complex<double> booster_centered_pos(ag->navigator->coord_map[node].real() + 0.5,
-											 	 ag->navigator->coord_map[node].imag() + 0.5);
+			complex<double> booster_centered_pos(ag->nav_select.base_nav->coord_map[node].real() + 0.5,
+											 	 ag->nav_select.base_nav->coord_map[node].imag() + 0.5);
 			al_draw_filled_circle(TO_SCREEN(booster_centered_pos), 10 / SHAPE_SCALE,
 							  color_map.at(ag->boosters_map[node]));
 		}
@@ -97,17 +97,17 @@ void renderer::draw() {
 
 	if (source)
 		al_draw_filled_rectangle(
-				TO_SCREEN(ag->navigator->coord_map[*source]),
-				TO_SCREEN(ag->navigator->coord_map[*source] + position(1, 1)), al_map_rgb(0, 255, 0));
+				TO_SCREEN(ag->nav_select.base_nav->coord_map[*source]),
+				TO_SCREEN(ag->nav_select.base_nav->coord_map[*source] + position(1, 1)), al_map_rgb(0, 255, 0));
 	if (target)
 		al_draw_filled_rectangle(
-				TO_SCREEN(ag->navigator->coord_map[*target]),
-				TO_SCREEN(ag->navigator->coord_map[*target] + position(1, 1)), RED_COL);
+				TO_SCREEN(ag->nav_select.base_nav->coord_map[*target]),
+				TO_SCREEN(ag->nav_select.base_nav->coord_map[*target] + position(1, 1)), RED_COL);
 	if (arc) {
-		complex<double> center_1(ag->navigator->coord_map[ag->navigator->graph.source(*arc)].real() + 0.5,
-								 ag->navigator->coord_map[ag->navigator->graph.source(*arc)].imag() + 0.5);
-		complex<double> center_2(ag->navigator->coord_map[ag->navigator->graph.target(*arc)].real() + 0.5,
-								 ag->navigator->coord_map[ag->navigator->graph.target(*arc)].imag() + 0.5);
+		complex<double> center_1(ag->nav_select.base_nav->coord_map[ag->nav_select.base_nav->graph.source(*arc)].real() + 0.5,
+								 ag->nav_select.base_nav->coord_map[ag->nav_select.base_nav->graph.source(*arc)].imag() + 0.5);
+		complex<double> center_2(ag->nav_select.base_nav->coord_map[ag->nav_select.base_nav->graph.target(*arc)].real() + 0.5,
+								 ag->nav_select.base_nav->coord_map[ag->nav_select.base_nav->graph.target(*arc)].imag() + 0.5);
 		al_draw_line(
 				TO_SCREEN(center_1),
 				TO_SCREEN(center_2), WHITE_COL, 10/SHAPE_SCALE);
@@ -225,7 +225,7 @@ void renderer::mainLoop() {
 	al_register_event_source(event_queue, al_get_timer_event_source(timer));
 	al_register_event_source(event_queue, al_get_keyboard_event_source());
 	al_clear_to_color(al_map_rgb(0, 0, 0));
-	al_flip_display();
+	//al_flip_display();
 	al_start_timer(timer);
 	while (!doexit) {
 		ALLEGRO_EVENT ev;
@@ -332,6 +332,18 @@ void renderer::mainLoop() {
 				case ALLEGRO_KEY_E:
 					ag->execute_seq("E");
 					break;
+				case ALLEGRO_KEY_B:
+					ag->execute_seq("B("+
+						to_string(manipulators_list[ag->owned_manipulators + 3][0].real()) +
+						"," +
+						to_string(manipulators_list[ag->owned_manipulators + 3][0].imag()) +")");
+						break;
+				case ALLEGRO_KEY_F:
+					ag->execute_seq("F");
+					break;
+				case ALLEGRO_KEY_L:
+					ag->execute_seq("L");
+					break;
 				case ALLEGRO_KEY_N:
 					step_it = !step_it;
 					break;
@@ -354,10 +366,9 @@ void renderer::mainLoop() {
 			al_flip_display();
 		}
 	}
-
+	al_destroy_font(debug_font);
 	al_destroy_timer(timer);
-	al_destroy_display(display);
 	al_destroy_event_queue(event_queue);
-
+	al_destroy_display(display);
 	return;
 }
