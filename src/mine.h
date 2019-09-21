@@ -125,7 +125,7 @@ class navigator_selector {
 
 	int fast_mode_step_left = 0;
 	int drill_mode_step_left = 0;
-
+	bool navigator_changed;
 
 };
 

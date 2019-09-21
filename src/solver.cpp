@@ -13,6 +13,7 @@
 #include "openga.hpp"
 #include "renderer.h"
 #include "sys/time.h"
+#include "filesystem"
 
 static const vector<tuple<int, int, int, int, int>> testbench_table = {
 	{2, 50, 3000, 3000, 3000},
@@ -42,7 +43,7 @@ int main(int argc, char** argv) {
 	int c;
 	int population1 = 300;
 	int population2 = 3000;
-	int population3 = 100;
+	int population3 = 500;
 	int gInstance = 46;
 	int region_size = 50;
 	bool perform_partitionning = false;
@@ -99,8 +100,8 @@ int main(int argc, char** argv) {
 		auto_region_size = true;
 		for (int i = start_instance; i < 301; i++) {
 			population1 = 300;
-			population2 = 500;
-			population3 = 100;
+			population2 = 3000;
+			population3 = 1000;
 			problems.push_back(make_tuple(i, region_size, population1, population2, population3));
 		}
 	} else if (testbench) {
@@ -131,6 +132,7 @@ int main(int argc, char** argv) {
 			else if (gInstance < 151) region_size = 100;
 			else if (gInstance < 181) region_size = 70;
 			else if (gInstance < 201) region_size = 150;
+			else region_size = 300;
 		}
 		cout << "instance = " << gInstance << ", region_size = " << region_size << ", populations = " << population1 << " " << population2 << " " << population3 << endl;
 		EA::Chronometer main_timer;
@@ -198,7 +200,7 @@ int main(int argc, char** argv) {
 			output_file.flush();
 			output_file.close();
 		}
-
+		int score;
 		if (perform_optimization) {
 			cout << "************ SOLVING ****************" << endl;
 			vector<vector<position>> zone_list =
@@ -219,8 +221,17 @@ int main(int argc, char** argv) {
 				output_file.flush();
 				output_file.close();
 				cout << "instance " << gInstance << ", " << i+1 << "/" << zone_list.size() << ", total score = " << optimizer.score << endl;
+				score = optimizer.score;
 			}
 			std::ofstream output_file;
+			ostringstream score_filename;
+			score_filename << "./scores/" << gInstance << "_s" << region_size <<
+							  "_p" << population1 << "_p" << population2 << "_p" << population3 << "_"<< score;
+			output_file.open(score_filename.str(),
+							std::ofstream::trunc);
+			output_file << solution_str << endl;
+			output_file.flush();
+			output_file.close();
 			output_file.open("./testbench/" + testbench_identifier + ".txt",
 							std::ofstream::app);
 			output_file << "instance " << gInstance << ", time = " << main_timer.toc() << ", total size = " << solution_str.length() << "  " << solution_str << endl;

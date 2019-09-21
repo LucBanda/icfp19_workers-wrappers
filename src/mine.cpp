@@ -264,6 +264,7 @@ void navigator_selector::activate_boost(enum Booster booster) {
 }
 
 void navigator_selector::step() {
+	navigator_changed = false;
 	if (fast_mode_step_left > 0) {
 		fast_mode_step_left--;
 	}
@@ -271,18 +272,22 @@ void navigator_selector::step() {
 		drill_mode_step_left--;
 	}
 	if (fast_mode_step_left > 0 && drill_mode_step_left > 0) {
+		if (current_mode != FAST_DRILL_MODE) navigator_changed = true;
 		current_mode = FAST_DRILL_MODE;
 		moving_nav = &navigators.full_nav;
 		navigating_nav = &navigators.fast_full_nav;
 	} else if (fast_mode_step_left > 0) {
+		if (current_mode != FAST_MODE) navigator_changed = true;
 		current_mode = FAST_MODE;
 		moving_nav = &navigators.masked_nav;
 		navigating_nav = &navigators.fast_nav;
 	} else if (drill_mode_step_left > 0) {
+		if (current_mode != DRILL_MODE) navigator_changed = true;
 		current_mode = DRILL_MODE;
 		moving_nav = &navigators.full_nav;
 		navigating_nav = &navigators.full_nav;
 	} else {
+		if (current_mode != STANDARD_MODE) navigator_changed = true;
 		current_mode = STANDARD_MODE;
 		moving_nav = &navigators.masked_nav;
 		navigating_nav = &navigators.masked_nav;

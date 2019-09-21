@@ -270,8 +270,16 @@ string get_orientation(orientation source, orientation target) {
 string agent::execution_map_from_node_list(vector<pair<Node, orientation>> list_node) {
 	string result;
 	//for each node in list
-	for (const auto &it:list_node) {
-		Node full_node = nav_select.navigators.masked_nav.to_full_graph_nodes[it.first];
+	if (owned_fast_wheels > 0) {
+		result += "F";
+		execute_seq("F");
+	}
+	vector<pair<Node, orientation>> remaining_nodes = list_node;
+	while(remaining_nodes.size()) {
+		pair<Node, orientation> goal = remaining_nodes[0];
+		remaining_nodes.erase(remaining_nodes.begin());
+
+		Node full_node = nav_select.navigators.masked_nav.to_full_graph_nodes[goal.first];
 		Node nav_node = nav_select.navigating_nav->from_full_graph_nodes[full_node];
 
 		if (painted_map[full_node] && boosters_map[full_node] == NONE) {
@@ -279,7 +287,7 @@ string agent::execution_map_from_node_list(vector<pair<Node, orientation>> list_
 		}
 
 		//orient correctly
-		string new_string = get_orientation(robot_orientation, it.second);
+		string new_string = get_orientation(robot_orientation, goal.second);
 		result += new_string;
 		execute_seq(new_string);
 
@@ -288,42 +296,61 @@ string agent::execution_map_from_node_list(vector<pair<Node, orientation>> list_
 			continue;
 		}
 
-		// apply bfs to graph
-		Bfs<Graph> bfs(nav_select.navigating_nav->graph);
+		bool interrupted = true;
+		while (interrupted) {
+			interrupted = false;
+			// apply bfs to graph
+			Bfs<Graph> bfs(nav_select.navigating_nav->graph);
 
-		Bfs<Graph>::DistMap dist(nav_select.navigating_nav->graph);
-		Bfs<Graph>::PredMap predmap(nav_select.navigating_nav->graph);
-		Bfs<Graph>::ProcessedMap processedmap;
-		Bfs<Graph>::ReachedMap reachedmap(nav_select.navigating_nav->graph);
+			Bfs<Graph>::DistMap dist(nav_select.navigating_nav->graph);
+			Bfs<Graph>::PredMap predmap(nav_select.navigating_nav->graph);
+			Bfs<Graph>::ProcessedMap processedmap;
+			Bfs<Graph>::ReachedMap reachedmap(nav_select.navigating_nav->graph);
 
-		bfs.distMap(dist);
-		bfs.predMap(predmap);
-		bfs.processedMap(processedmap);
-		bfs.reachedMap(reachedmap);
+			bfs.distMap(dist);
+			bfs.predMap(predmap);
+			bfs.processedMap(processedmap);
+			bfs.reachedMap(reachedmap);
 
-		bfs.run(nav_select.navigating_nav->from_full_graph_nodes[robot_pos], nav_node);
-		auto path = bfs.path(nav_node);
-		vector<Arc> path_forward;
-		path_forward.reserve(path.length());
-		for (Bfs<Graph>::Path::RevArcIt e(path); e != INVALID; ++e) {
-			SmartDigraph::Arc arc = e;
-			path_forward.push_back(arc);
-		}
-		reverse(path_forward.begin(), path_forward.end());
-		for (const auto &e:path_forward) {
-			//paint the map, collect the boosters
-			if (painted_map[full_node] && boosters_map[full_node] == NONE) {
+			bfs.run(nav_select.navigating_nav->from_full_graph_nodes[robot_pos], nav_node);
+			auto path = bfs.path(nav_node);
+			if (path.length() == 0) {
+				//case where there is no path, try again later
+				result+="A";
+				execute_seq("A");
+				remaining_nodes.push_back(goal);
 				break;
 			}
-			string new_string(1, nav_select.navigating_nav->direction_map[e]);
-			result += new_string;
-			execute_seq(new_string);
-			if (owned_manipulators > relative_manipulators.size() - 4) {
-				vector<position> additionnal_manipulator = manipulators_list[owned_manipulators+3];
-				relative_manipulators.push_back(additionnal_manipulator);
-				new_string =  "B(" + to_string(additionnal_manipulator[0].real()) + ","+ to_string(additionnal_manipulator[0].imag()) + ")";
+			vector<Arc> path_forward;
+			path_forward.reserve(path.length());
+			for (Bfs<Graph>::Path::RevArcIt e(path); e != INVALID; ++e) {
+				SmartDigraph::Arc arc = e;
+				path_forward.push_back(arc);
+			}
+			reverse(path_forward.begin(), path_forward.end());
+			for (const auto &e:path_forward) {
+				//paint the map, collect the boosters
+				if (painted_map[full_node] && boosters_map[full_node] == NONE) {
+					break;
+				}
+				string new_string(1, nav_select.navigating_nav->direction_map[e]);
 				result += new_string;
 				execute_seq(new_string);
+				if (nav_select.navigator_changed) {
+					interrupted =true;
+					break;
+				}
+				if (owned_manipulators > relative_manipulators.size() - 4) {
+					vector<position> additionnal_manipulator = manipulators_list[owned_manipulators+3];
+					relative_manipulators.push_back(additionnal_manipulator);
+					new_string =  "B(" + to_string(additionnal_manipulator[0].real()) + ","+ to_string(additionnal_manipulator[0].imag()) + ")";
+					result += new_string;
+					execute_seq(new_string);
+					if (nav_select.navigator_changed) {
+						interrupted =true;
+						break;
+					}
+				}
 			}
 		}
 	}
