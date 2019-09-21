@@ -24,7 +24,7 @@
 #define TO_SCREEN(c) \
 	SCREEN_W *(real(c) + 1) / SCALE, SCREEN_H - SCREEN_H *(imag(c) + 1) / SCALE
 
-#define SHAPE_SCALE 2.
+#define SHAPE_SCALE 1.
 const int SCREEN_W = 2000. / SHAPE_SCALE;
 const int SCREEN_H = 2000. / SHAPE_SCALE;
 
@@ -53,7 +53,7 @@ void renderer::draw() {
 	al_draw_filled_rectangle(0, 0, SCREEN_W, SCREEN_H, BOULDER_COL);
 
 	for (Graph::NodeIt node(ag->nav_select.navigators.masked_nav.graph); node != INVALID; ++node) {
-		if (!ag->painted_map[ag->nav_select.base_nav->to_full_graph_nodes[node]]) {
+		if (!ag->painted_map[ag->navigators.masked_nav.to_full_graph_nodes[node]]) {
 			al_draw_filled_rectangle(
 				TO_SCREEN(ag->nav_select.navigators.masked_nav.coord_map[node]),
 				TO_SCREEN(ag->nav_select.navigators.masked_nav.coord_map[node] + position(1, 1)), WHITE_COL);
@@ -167,6 +167,30 @@ void renderer::draw() {
 			}
 		}
 	}
+	if (mouse_position != position(-1, -1)) {
+		const vector<mineGraph *> navigs = {ag->nav_select.base_nav, ag->nav_select.moving_nav, ag->nav_select.navigating_nav};
+		ostringstream debug_str;
+		for (const auto &navig:navigs) {
+			Node node = navig->node_from_coord(mouse_position);
+			debug_str <<navig->name << ": " << navig->graph.id(node) <<
+								" (" << navig->coord_map[node].real() << ", " << navig->coord_map[node].imag() << ")" << endl;
+
+			for (Graph::OutArcIt it(navig->graph, node); it!= INVALID; ++it) {
+				Node target = navig->graph.target(it);
+				debug_str << navig->direction_map[it] << ": " << navig->graph.id(target) << "  ";
+			}
+			debug_str << endl << endl;
+		}
+		al_draw_filled_rectangle(
+				0, 0,
+				SCREEN_W / 3., SCREEN_H / 2, WHITE_COL);
+		al_draw_multiline_text(debug_font, al_map_rgb(0, 0, 0),
+							 5, 5, SCREEN_W/3, 40, ALLEGRO_ALIGN_LEFT,
+							 debug_str.str().c_str());
+		/*al_draw_text(debug_font, al_map_rgb(0, 0, 0),
+							 5, 5, ALLEGRO_ALIGN_LEFT,
+							 debug_str.c_str());*/
+	}
 }
 
 enum MYKEYS { KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_R };
@@ -188,6 +212,11 @@ void renderer::mainLoop() {
 		return;
 	}
 
+	if(!al_install_mouse()) {
+      fprintf(stderr, "failed to initialize the mouse!\n");
+      return;
+   }
+
 	timer = al_create_timer(1.0 / FPS);
 	if (!timer) {
 		fprintf(stderr, "failed to create timer!\n");
@@ -197,7 +226,7 @@ void renderer::mainLoop() {
 	al_init_ttf_addon();   // initialize the ttf (True Type Font) addon
 
 	debug_font =
-		al_load_ttf_font("./src/AllegroBT-Regular.otf", 50 / SHAPE_SCALE, 0);
+		al_load_ttf_font("./src/AllegroBT-Regular.otf", 40 / SHAPE_SCALE, 0);
 
 	al_set_new_window_title(to_string(instance).c_str());
 
@@ -224,6 +253,7 @@ void renderer::mainLoop() {
 	al_register_event_source(event_queue, al_get_display_event_source(display));
 	al_register_event_source(event_queue, al_get_timer_event_source(timer));
 	al_register_event_source(event_queue, al_get_keyboard_event_source());
+	al_register_event_source(event_queue, al_get_mouse_event_source());
 	al_clear_to_color(al_map_rgb(0, 0, 0));
 	//al_flip_display();
 	al_start_timer(timer);
@@ -354,7 +384,15 @@ void renderer::mainLoop() {
 					exit(0);
 					break;
 			}
-		} else {
+		} else if(ev.type == ALLEGRO_EVENT_MOUSE_AXES ||
+              ev.type == ALLEGRO_EVENT_MOUSE_ENTER_DISPLAY) {
+
+		} else if (ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN) {
+			//(ev.mouse.y - SCREEN_H) / SCREEN_H *SCALE -1 =  SCREEN_H *(imag(c) + 1) / SCALE
+			mouse_position = position(ev.mouse.x * SCALE / SCREEN_W - 1,  (SCREEN_H - ev.mouse.y) *SCALE / SCREEN_H -1);
+		} else if(ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_UP) {
+			mouse_position = position(-1, -1);
+			//break;
 		}
 
 		if (redraw && al_is_event_queue_empty(event_queue)) {

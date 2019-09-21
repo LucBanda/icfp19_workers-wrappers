@@ -204,7 +204,7 @@ int main(int argc, char** argv) {
 			vector<vector<position>> zone_list =
 				parse_split("./results/order-" + to_string(gInstance) + ".txt");
 			string solution_str = "";
-			agent ag(navigators, nav.initialNode);
+			agent ag(navigators, navigators.full_nav.initialNode);
 			for (int i = 0; i < zone_list.size(); i++) {
 				genetic_optimizer optimizer(gInstance, ag, zone_list, i,
 											solution_str);

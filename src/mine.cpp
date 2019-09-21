@@ -187,6 +187,7 @@ void mineGraph::create_double_arcs(mine_parser &parser, bool fullnodes) {
 masked_navigator::masked_navigator(mine_parser &parser)
 	: mineGraph(parser.instance)
  {
+	 name = "masked navigator";
 	 max_size_x = parser.max_size_x;
 	 max_size_y = parser.max_size_y;
 	create_masked_nodes(parser);
@@ -196,6 +197,7 @@ masked_navigator::masked_navigator(mine_parser &parser)
 full_navigator::full_navigator(mine_parser &parser)
 	: mineGraph(parser.instance)
  {
+	 name = "full navigator";
 	 max_size_x = parser.max_size_x;
 	 max_size_y = parser.max_size_y;
 	create_full_nodes(parser);
@@ -205,6 +207,7 @@ full_navigator::full_navigator(mine_parser &parser)
 
 fast_navigator::fast_navigator(mine_parser &parser):
 mineGraph(parser.instance) {
+	name = "fast navigator";
 	 max_size_x = parser.max_size_x;
 	 max_size_y = parser.max_size_y;
 	create_masked_nodes(parser);
@@ -213,6 +216,7 @@ mineGraph(parser.instance) {
 
 fast_full_navigator::fast_full_navigator(mine_parser &parser):
 mineGraph(parser.instance){
+	name = "fast full navigator";
 	 max_size_x = parser.max_size_x;
 	 max_size_y = parser.max_size_y;
 	create_full_nodes(parser);
@@ -299,8 +303,8 @@ navigator_factory::navigator_factory(int arg_instance):
 
 		position full_coord = full_nav.coord_map[full_node];
 		if (masked_nav.is_coord_in_map(full_coord)) {
-			Node main_node = masked_nav.node_from_coord(full_nav.coord_map[full_node]);
-			Node fast_node = fast_nav.node_from_coord(full_nav.coord_map[full_node]);
+			Node main_node = masked_nav.node_from_coord(full_coord);
+			Node fast_node = fast_nav.node_from_coord(full_coord);
 			masked_nav.to_full_graph_nodes[main_node] = full_node;
 			masked_nav.from_full_graph_nodes[full_node] = main_node;
 			fast_nav.to_full_graph_nodes[fast_node] = full_node;

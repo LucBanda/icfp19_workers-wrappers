@@ -121,7 +121,7 @@ void agent::paint_valid_nodes() {
 				should_apply = false;
 				break;
 			} else if (&mask == &mask_list.front()) {
-				manipulator = node_mask;
+				manipulator = nav_select.navigators.masked_nav.to_full_graph_nodes[node_mask];
 			}
 		}
 		if (should_apply) {
@@ -239,10 +239,10 @@ int agent::cost_to_next_zone(vector<vector<Node>> &zones, int zone_id) {
 		bfs.reachedMap(reachedmap);
 
 		bfs.init();
-		bfs.addSource(robot_pos);
+		bfs.addSource(nav_select.navigating_nav->from_full_graph_nodes[robot_pos]);
 		Node arrival = INVALID;
 		while (!bfs.emptyQueue() && arrival == INVALID) {
-			Node n = bfs.processNextNode();
+			Node n = nav_select.navigators.masked_nav.from_full_graph_nodes[nav_select.navigating_nav->to_full_graph_nodes[bfs.processNextNode()]];
 			if (find(zones[zone_id].begin(), zones[zone_id].end(), n) != zones[zone_id].end()) {
 					arrival = n;
 					break;
@@ -271,8 +271,10 @@ string agent::execution_map_from_node_list(vector<pair<Node, orientation>> list_
 	string result;
 	//for each node in list
 	for (const auto &it:list_node) {
-		//if tile is not painted and has no manipulator
-		if (painted_map[it.first] && boosters_map[it.first] == NONE) {
+		Node full_node = nav_select.navigators.masked_nav.to_full_graph_nodes[it.first];
+		Node nav_node = nav_select.navigating_nav->from_full_graph_nodes[full_node];
+
+		if (painted_map[full_node] && boosters_map[full_node] == NONE) {
 			continue;
 		}
 
@@ -282,11 +284,11 @@ string agent::execution_map_from_node_list(vector<pair<Node, orientation>> list_
 		execute_seq(new_string);
 
 		//goto selected node if it is not the current position
-		if (robot_pos == it.first) {
+		if (robot_pos == full_node) {
 			continue;
 		}
 
-		// apply dijkstra to graph
+		// apply bfs to graph
 		Bfs<Graph> bfs(nav_select.navigating_nav->graph);
 
 		Bfs<Graph>::DistMap dist(nav_select.navigating_nav->graph);
@@ -299,8 +301,8 @@ string agent::execution_map_from_node_list(vector<pair<Node, orientation>> list_
 		bfs.processedMap(processedmap);
 		bfs.reachedMap(reachedmap);
 
-		bfs.run(robot_pos, it.first);
-		auto path = bfs.path(it.first);
+		bfs.run(nav_select.navigating_nav->from_full_graph_nodes[robot_pos], nav_node);
+		auto path = bfs.path(nav_node);
 		vector<Arc> path_forward;
 		path_forward.reserve(path.length());
 		for (Bfs<Graph>::Path::RevArcIt e(path); e != INVALID; ++e) {
@@ -310,37 +312,19 @@ string agent::execution_map_from_node_list(vector<pair<Node, orientation>> list_
 		reverse(path_forward.begin(), path_forward.end());
 		for (const auto &e:path_forward) {
 			//paint the map, collect the boosters
-			if (painted_map[it.first] && boosters_map[it.first] == NONE) {
+			if (painted_map[full_node] && boosters_map[full_node] == NONE) {
 				break;
 			}
-			const Node &result_node = nav_select.navigating_nav->graph.target(e);
-			result += nav_select.navigating_nav->direction_map[e];
-			robot_pos = result_node;
-			time_step++;
-			nav_select.step();
-
-			Booster boost = boosters_map[robot_pos];
-			if (boost != NONE) {
-				boosters_map[robot_pos] = NONE;
-				switch (boost) {
-				case MANIPULATOR: {
-					owned_manipulators ++;
-					vector<position> additionnal_manipulator = manipulators_list[owned_manipulators+3];
-					relative_manipulators.push_back(additionnal_manipulator);
-					result += "B(" + to_string(additionnal_manipulator[0].real()) + ","+ to_string(additionnal_manipulator[0].imag()) + ")";
-					break;
-				}
-				case DRILL:
-					owned_drill ++;
-					break;
-				case FASTWHEEL:
-					owned_fast_wheels ++;
-					break;
-				default:
-					break;
-				}
+			string new_string(1, nav_select.navigating_nav->direction_map[e]);
+			result += new_string;
+			execute_seq(new_string);
+			if (owned_manipulators > relative_manipulators.size() - 4) {
+				vector<position> additionnal_manipulator = manipulators_list[owned_manipulators+3];
+				relative_manipulators.push_back(additionnal_manipulator);
+				new_string =  "B(" + to_string(additionnal_manipulator[0].real()) + ","+ to_string(additionnal_manipulator[0].imag()) + ")";
+				result += new_string;
+				execute_seq(new_string);
 			}
-			paint_valid_nodes();
 		}
 	}
 	return result;

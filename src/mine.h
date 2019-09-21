@@ -35,6 +35,7 @@ class mineGraph {
    public:
     mineGraph(int instance);
 	~mineGraph(){};
+	string name;
 	void create_masked_nodes(mine_parser &parser);
 	void create_full_nodes(mine_parser &parser);
 	void create_single_arcs(mine_parser &parser, bool fullnodes);

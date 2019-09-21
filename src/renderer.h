@@ -38,6 +38,7 @@ class renderer {
 	enum renderer_mode mode;
 	bool display_path = false;
 	bool display_text = false;
+	position mouse_position = position(-1, -1);
 
    public:
 	std::function<bool(void *)> idle;

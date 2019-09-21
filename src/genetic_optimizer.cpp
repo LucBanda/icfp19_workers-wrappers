@@ -162,11 +162,12 @@ void genetic_optimizer::SO_report_generation(
 genetic_optimizer::genetic_optimizer(int arg_instance, agent &arg_base_agent,
 									 vector<vector<position>>& arg_zones,
 									 int arg_zone_id,
-									 string arg_start_string):base_agent(arg_base_agent) {
+									 string arg_start_string):
+				base_agent(arg_base_agent) {
 	instance = arg_instance;
 	zone_id = arg_zone_id;
 	start_string = arg_start_string;
-	navigator = base_agent.nav_select.navigating_nav;
+	navigator = &base_agent.navigators.masked_nav;
 	zones = navigator->node_from_coords(arg_zones);
 	for (const auto &node: zones[zone_id]) {
 		int degree = countOutArcs(navigator->graph, node);
