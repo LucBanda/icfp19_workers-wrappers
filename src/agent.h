@@ -37,6 +37,9 @@ class agent {
 	void paint_valid_nodes();
 	vector<vector<position>> relative_manipulators;
 
+	string collect_boosters(vector<Node> &boosters);
+	string execution_map_from_zones(const vector<vector<pair<Node, orientation>>> &oriented_zones);
+
 };
 
 #endif

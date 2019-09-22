@@ -224,6 +224,15 @@ genetic_orderer::genetic_orderer(navigator_factory& arg_navigators,
 								 vector<vector<Node>>& zones)
 	: navigators(arg_navigators), submine_to_mine_nodes(graph), boosters_map(graph), cost(graph), node_cost_per_booster_cnt(graph)  {
 
+	agent ag(arg_navigators,navigators.full_nav.initialNode);
+	vector<Node> manipulator_boosters;
+	for (NodeIt node(ag.nav_select.navigating_nav->graph); node!= INVALID; ++node) {
+		if (ag.boosters_map[ag.nav_select.navigating_nav->to_full_graph_nodes[node]] == MANIPULATOR)
+			manipulator_boosters.push_back(node);
+	}
+	ag.collect_boosters(manipulator_boosters);
+	Node start_after_boosters = navigators.masked_nav.from_full_graph_nodes[ag.robot_pos];
+
 	masked_navigator &nav = navigators.masked_nav;
 	struct timeval time;
 	gettimeofday(&time, NULL);
@@ -239,7 +248,7 @@ genetic_orderer::genetic_orderer(navigator_factory& arg_navigators,
 	// starting point
 	vector<Node> start_zone;
 	for (const auto &zone : zones) {
-		if (find(zone.begin(), zone.end(), nav.initialNode) != zone.end()) {
+		if (find(zone.begin(), zone.end(), start_after_boosters) != zone.end()) {
 			start_zone = zone;
 		}
 	}
