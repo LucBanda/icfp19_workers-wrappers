@@ -128,10 +128,10 @@ int main(int argc, char** argv) {
 			if (gInstance == 2) region_size = 50;
 			else if (gInstance < 21) region_size = 30;
 			else if (gInstance < 51) region_size = 50;
-			else if (gInstance < 101) region_size = 70;
-			else if (gInstance < 151) region_size = 100;
-			else if (gInstance < 181) region_size = 70;
-			else if (gInstance < 201) region_size = 150;
+			else if (gInstance < 101) region_size = 100;
+			else if (gInstance < 151) region_size = 300;
+			else if (gInstance < 181) region_size = 100;
+			else if (gInstance < 201) region_size = 200;
 			else region_size = 300;
 		}
 		cout << "instance = " << gInstance << ", region_size = " << region_size << ", populations = " << population1 << " " << population2 << " " << population3 << endl;
