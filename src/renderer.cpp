@@ -224,7 +224,7 @@ void renderer::mainLoop() {
 	}
 	al_init_font_addon();  // initialize the font addon
 	al_init_ttf_addon();   // initialize the ttf (True Type Font) addon
-
+	al_init_primitives_addon();
 	debug_font =
 		al_load_ttf_font("./src/AllegroBT-Regular.otf", 40 / SHAPE_SCALE, 0);
 

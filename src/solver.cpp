@@ -13,7 +13,6 @@
 #include "openga.hpp"
 #include "renderer.h"
 #include "sys/time.h"
-#include "filesystem"
 
 static const vector<tuple<int, int, int, int, int>> testbench_table = {
 	{2, 50, 3000, 3000, 3000},
