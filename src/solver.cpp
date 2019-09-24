@@ -41,9 +41,9 @@ int main(int argc, char** argv) {
 	int start_instance = 0;
 	int c;
 	int population1 = 300;
-	int population2 = 3000;
+	int population2 = 500;
 	int population3 = 1000;
-	int gInstance = 57;
+	int gInstance = 150;
 	int region_size = 50;
 	bool perform_partitionning = false;
 	bool perform_ordering = false;
@@ -99,7 +99,7 @@ int main(int argc, char** argv) {
 		auto_region_size = true;
 		for (int i = start_instance; i < 301; i++) {
 			population1 = 300;
-			population2 = 3000;
+			population2 = 500;
 			population3 = 1000;
 			problems.push_back(make_tuple(i, region_size, population1, population2, population3));
 		}
@@ -128,10 +128,11 @@ int main(int argc, char** argv) {
 			else if (gInstance < 21) region_size = 30;
 			else if (gInstance < 51) region_size = 50;
 			else if (gInstance < 101) region_size = 100;
-			else if (gInstance < 151) region_size = 300;
+			else if (gInstance < 151) region_size = 200;
 			else if (gInstance < 181) region_size = 100;
+			else if (gInstance < 188) region_size = 200;
 			else if (gInstance < 201) region_size = 200;
-			else region_size = 300;
+			else region_size = 200;
 		}
 		cout << "instance = " << gInstance << ", region_size = " << region_size << ", populations = " << population1 << " " << population2 << " " << population3 << endl;
 		EA::Chronometer main_timer;
@@ -231,7 +232,7 @@ int main(int argc, char** argv) {
 			}
 			std::ofstream output_file;
 			ostringstream score_filename;
-			score_filename << "./scores/" << gInstance << "_s" << region_size <<
+			score_filename << "./scores_new_optimizer/" << gInstance << "_s" << region_size <<
 							  "_p" << population1 << "_p" << population2 << "_p" << population3 << "_"<< score;
 			output_file.open(score_filename.str(),
 							std::ofstream::trunc);

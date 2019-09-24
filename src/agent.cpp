@@ -228,6 +228,7 @@ int agent::cost_to_next_zone(vector<vector<Node>> &zones, int zone_id) {
 		std::vector<Arc> arcpath;
 		Bfs<Graph> bfs(nav_select.navigating_nav->graph);
 
+		//provide maps to algorithm just to gain some time on allocating them in a thread
 		Bfs<Graph>::DistMap dist(nav_select.navigating_nav->graph);
 		Bfs<Graph>::PredMap predmap(nav_select.navigating_nav->graph);
 		Bfs<Graph>::ProcessedMap processedmap;

@@ -20,98 +20,90 @@ using std::cout;
 using std::endl;
 using std::string;
 
-static int randomfunc(int j) { return rand() % j; }
+//static int randomfunc(int j) { return rand() % j; }
 
 // this initializes the genes, generating a random shuffle of node orders
 void genetic_orderer::init_genes(MySolution& p,
 								 const std::function<double(void)>& rnd01) {
-	struct timeval time;
-	p.split = vector<int>(node_list.size());
-	gettimeofday(&time, NULL);
-	srand((time.tv_sec) + (time.tv_usec));
-	iota(p.split.begin(), p.split.end(), 0);
-	random_shuffle(p.split.begin(), p.split.end(), randomfunc);
+
+	for (int i = 0; i < node_list.size(); i++) {
+		p.params.push_back((int)(rnd01() * 10.));
+	}
+
 }
 
 int genetic_orderer::execute_sequence(const genetic_orderer::MySolution &p, vector<SmartGraph::Node> *result) {
 
-	if (result) result->reserve(p.split.size());
-
 	int result_score = 0;
 
-	SmartGraph::Node orig = starting_node;
-	SmartGraph::Node dest = starting_node;
 	SmartGraph::NodeMap<bool> filled(graph, false);
 	SmartGraph::EdgeMap<int>  length(graph, 1);
 
-	int manip_boosters_catches = 0;
-	int fastwheel_boosters_credit = 0;
-
 	//start with start node
 	result_score = 0;
+	result->push_back(starting_node);
 	filled[starting_node] = true;
-	for (SmartGraph::IncEdgeIt e(graph, starting_node); e != INVALID; ++e) {
-		length.set(e, cost[e]); // new length if going through a node is approximated to the distance of the centers
-	}
+	SmartGraph::Node current_node = starting_node;
+	int step = 0;
+	int zones_to_fill = node_list.size();
 
-	for (const auto &it: p.split) {
-		dest = node_list.at(it);
-		if (filled[dest] ) {
-			//if next zone to visit is filled, do not take it into account
-			continue;
-		}
-		Dijkstra<SmartGraph, SmartGraph::EdgeMap<int>> dijkstra(graph, length);
+	while (zones_to_fill) {
+		//find bfs next nodes which are not filled
+		std::vector<Arc> arcpath;
+		Bfs<SmartGraph> bfs(graph);
 
-		dijkstra.run(orig, dest);
-		//auto path = dijkstra.path(dest);
-		vector<SmartGraph::Edge> pathEdges;
-		vector<SmartGraph::Node> pathNodes;
-		SmartGraph::Edge predEdge = dijkstra.predArc(dest);
-		SmartGraph::Node predNode = dijkstra.predNode(dest);
-		pathEdges.reserve(p.split.size());
-		pathNodes.reserve(p.split.size());
-		while (predEdge != INVALID) {
-			pathEdges.push_back(predEdge);
-			pathNodes.push_back(predNode);
-			predEdge = dijkstra.predArc(predNode);
-			predNode = dijkstra.predNode(predNode);
-		}
-		reverse(pathEdges.begin(), pathEdges.end());
-		reverse(pathNodes.begin(), pathNodes.end());
-		int path_cost = 0;
-		int zone_cost = 0;
-		pathNodes.push_back(dest);
-		for (int i = 0; i < pathNodes.size(); i++) {
-			auto &zone = pathNodes.at(i);
-			if (!filled[zone]) {
-				zone_cost += node_cost_per_booster_cnt[zone][manip_boosters_catches];
-				if (result) result->push_back(zone);
-				filled[zone] = true;
-				// from now on, dest is considered validated as well as non validated nodes on the path
-				// update length map for next dijkstras
-				//collect boosters
-				for (const auto &boost:boosters_map[zone])
-					if (boost == MANIPULATOR) {
-						manip_boosters_catches++;
-					} else if (boost == FASTWHEEL) {
-						fastwheel_boosters_credit += 50;
-					}
-			}
-			for (SmartGraph::IncEdgeIt e(graph, zone); e != INVALID; ++e) {
-				SmartGraph::Node trgt = (graph.v(e) == zone) ? graph.u(e) : graph.v(e);
-				if (filled[trgt])
-					length[e] = cost[e];
-				else length[e] = cost[e] /2;
-			}
-			if ((zone != dest)) {
-				auto edge = pathEdges.at(i);
-				path_cost += cost[edge];
-			}
+		//provide maps to algorithm just to gain some time on allocating them in a thread
+		Bfs<SmartGraph>::DistMap dist(graph);
+		Bfs<SmartGraph>::PredMap predmap(graph);
+		Bfs<SmartGraph>::ProcessedMap processedmap;
+		Bfs<SmartGraph>::ReachedMap reachedmap(graph);
+		vector<SmartGraph::Node> closests;
+		bfs.distMap(dist);
+		bfs.predMap(predmap);
+		bfs.processedMap(processedmap);
+		bfs.reachedMap(reachedmap);
 
+		bfs.init();
+		bfs.addSource(current_node);
+		int mindist = INT_MAX;
+		while (!bfs.emptyQueue()) {
+			SmartGraph::Node n = bfs.processNextNode();
+			if (!filled[n]) {
+				if (dist[n] <= mindist) {
+					mindist = dist[n];
+					closests.push_back(n);
+				} else {
+					break;
+				}
+			}
 		}
-		orig = dest;
-		//here we should consider discount of fastwheel
-		result_score += zone_cost + path_cost;
+		int min_degree = INT_MAX;
+		vector<SmartGraph::Node> final_candidates;
+		for (const auto &closest:closests) {
+			int degree = 0;
+			for (SmartGraph::OutArcIt e(graph, closest); e != INVALID; ++e) {
+				if (!filled[graph.target(e)]) {
+					degree ++;
+				}
+			}
+			if (degree <= min_degree) {
+				min_degree = degree;
+				final_candidates.push_back(closest);
+			}
+		}
+		SmartGraph::Node nextZone;
+		int size_candidates = final_candidates.size();
+		if (size_candidates > 1) {
+			nextZone = final_candidates[p.params[step++]%size_candidates];
+		} else {
+			nextZone = final_candidates[0];
+		}
+		result_score += dist[nextZone];
+		filled[nextZone] = true;
+		result->push_back(nextZone);
+		zones_to_fill--;
+		current_node = nextZone;
+
 	}
 	return result_score;
 
@@ -136,15 +128,9 @@ genetic_orderer::MySolution genetic_orderer::mutate(
 
 	MySolution X_new = X_base;
 
-	int swap1 = rnd01() * X_new.split.size();
-	int swap2 = rnd01() * X_new.split.size();
-	while (swap1 == swap2) {
-		swap1 = rnd01() * X_new.split.size();
-		swap2 = rnd01() * X_new.split.size();
-	}
-
-	reverse(X_new.split.begin() + min(swap1, swap2), X_new.split.begin() + max(swap1, swap2));
-
+	//int swap1 = rnd01() * X_new.split.size();
+	int mutate_gene = rnd01() * X_new.params.size();
+	X_new.params[mutate_gene] = max(0, (int)(-2 + 2 * rnd01()));
 	return X_new;
 }
 
@@ -155,46 +141,13 @@ genetic_orderer::MySolution genetic_orderer::crossover(
 	const genetic_orderer::MySolution& X2,
 	const std::function<double(void)>& rnd01) {
 
-	genetic_orderer::MySolution X_new = {
-		.split = vector<int>(X1.split.size(), -1)
-	};
+	int split = rnd01() * X1.params.size();
+	genetic_orderer::MySolution X_new;
+
+	X_new.params.insert(X_new.params.begin(), X1.params.begin(), X1.params.begin() + split);
+	X_new.params.insert(X_new.params.begin() + split, X2.params.begin() + split, X2.params.end());
 	//X_new.split.reserve(X1.split.size());
 
-	int position1 = rnd01() * X1.split.size();
-	int position2 = rnd01() * X1.split.size();
-	while (position1 == position2) {
-		position1 = rnd01() * X1.split.size();
-		position2 = rnd01() * X1.split.size();
-	}
-	int positionmin = min(position1, position2);
-	int positionmax = max(position1, position2);
-	int index = 0;
-	//vector<SmartGraph::Node> new_nodes;
-
-	// start new nodes by pushing the middle of X1
-	for (int i = positionmin; i < positionmax; i++) {
-		X_new.split[index++] = X1.split[i];
-	}
-
-	// then complete the sequence by getting X2 nodes if they are not already in
-	// the list
-	int j = positionmax;
-	while (1) {
-		int node = X2.split[j++];
-		if (j == (int)X1.split.size()) j = 0;
-		int i = X2.split.size();
-		while ((find(X_new.split.begin(), X_new.split.begin() + index, node) !=
-				   X_new.split.begin() + index) && i) {
-			i--;
-			node = X2.split[j++];
-			if (j == (int)X1.split.size()) j = 0;
-		}
-		if (i == 0) break;
-		if (index > X1.split.size()) {
-			cout << "issue" << endl;
-		}
-		X_new.split[index++] = node;
-	}
 
 	return X_new;
 }
@@ -222,7 +175,11 @@ void genetic_orderer::SO_report_generation(
 
 genetic_orderer::genetic_orderer(navigator_factory& arg_navigators,
 								 vector<vector<Node>>& zones)
-	: navigators(arg_navigators), submine_to_mine_nodes(graph), boosters_map(graph), cost(graph), node_cost_per_booster_cnt(graph)  {
+	: navigators(arg_navigators),
+	  submine_to_mine_nodes(graph),
+	  boosters_map(graph),
+	  cost(graph)
+	 {
 
 	agent ag(arg_navigators,navigators.full_nav.initialNode);
 	vector<Node> manipulator_boosters;
@@ -293,42 +250,8 @@ genetic_orderer::genetic_orderer(navigator_factory& arg_navigators,
 			}
 		}
 	}
-
-	init_node_cost_map();
 }
 
-
-void genetic_orderer::init_node_cost_map() {
-	masked_navigator &nav = navigators.masked_nav;
-	EA::Chronometer timer;
-	timer.tic();
-	for (SmartGraph::NodeIt orig(graph); orig != INVALID; ++orig) {
-		for(int i = 0; i < nav.boosters_lists[MANIPULATOR].size() + 1; i++) {
-			/*vector<vector<Node>> fake_list_of_nodes;
-			fake_list_of_nodes.push_back(submine_to_mine_nodes[orig]);
-			vector<vector<position>> fake_list_of_position = nav.list_of_coords_from_nodes(fake_list_of_nodes);
-			agent fake_ag(navigators, nav.initialNode);
-			fake_ag.robot_pos = submine_to_mine_nodes[orig][0];
-			fake_ag.set_current_nb_of_manipulators(i);
-			genetic_optimizer mine_cost_optim(0, fake_ag,
-					 fake_list_of_position, 0, "");
-			vector<Node> zone = submine_to_mine_nodes[orig];
-			mine_cost_optim.solve(200, 2);
-			int score = mine_cost_optim.score;
-			if ((node_cost_per_booster_cnt[orig].size() > 0) && score > *(node_cost_per_booster_cnt[orig].end() - 1) -2) {
-				score = *(node_cost_per_booster_cnt[orig].end() -1) -2;
-				//cout << graph.id(orig) << " fixed " << endl;
-			} else  {
-				cout << graph.id(orig) << " ";
-			}*/
-			int score = submine_to_mine_nodes[orig].size() - (i * submine_to_mine_nodes[orig].size() / 20.);
-			node_cost_per_booster_cnt[orig].push_back(score);
-		}
-		//if (verbose)
-			//cout << endl;
-	}
-	//cout << "Init cost map done in " << timer.toc() << " s" << endl;
-}
 
 genetic_orderer::~genetic_orderer() {}
 

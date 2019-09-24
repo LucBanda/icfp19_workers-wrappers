@@ -9,11 +9,11 @@
 
 class genetic_orderer {
 	struct MySolution {
-		vector<int> split;
+		vector<int> params;
 
 		string to_string(genetic_orderer* optim) const {
 			ostringstream res;
-			for (const auto &it : split) {
+			for (const auto &it : params) {
 				res << it << " / ";
 			}
 			return res.str();
@@ -40,13 +40,11 @@ class genetic_orderer {
 	//SmartGraph::NodeMap<vector<Booster>> boosters_map;
 	SmartGraph::EdgeMap<int> cost;
 	vector<SmartGraph::Node> node_list;
-	SmartGraph::NodeMap<vector<int>> node_cost_per_booster_cnt;
 	SmartGraph::Node starting_node;
 	bool verbose;
 
 	genetic_orderer(navigator_factory& arg_navigators, vector<vector<Node>> &arg_zones);
 	~genetic_orderer();
-	void init_node_cost_map();
 	vector<vector<Node>> solve(int population_size);
 
    private:
