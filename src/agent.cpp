@@ -30,7 +30,7 @@ const vector<vector<position>> manipulators_list = {
 	{position (0, 0)},
 };
 
-agent::agent(navigator_factory &arg_navigators, Node arg_start):
+agent::agent(navigator_factory &arg_navigators):
 	navigators(arg_navigators),
 	nav_select(navigators),
 	boosters_map(arg_navigators.full_nav.graph),
@@ -40,7 +40,7 @@ agent::agent(navigator_factory &arg_navigators, Node arg_start):
 		boosters_map[it] = nav_select.base_nav->boosters_map[it];
 	}
 	robot_orientation = EAST;
-	robot_pos = arg_start;
+	robot_pos = navigators.full_nav.initialNode;
 	owned_manipulators = 0;
 	owned_fast_wheels = 0;
 	owned_drill = 0;
@@ -269,6 +269,7 @@ string get_orientation(orientation source, orientation target) {
 }
 
 string agent::execution_map_from_node_list(vector<pair<Node, orientation>> list_node) {
+	//input is masked graph nodes
 	string result;
 	//for each node in list
 	if (owned_fast_wheels > 0) {
@@ -357,11 +358,11 @@ string agent::execution_map_from_node_list(vector<pair<Node, orientation>> list_
 	return result;
 }
 
-string agent::collect_boosters(vector<Node> &boosters) {
+string agent::collect_boosters(const vector<Node> &boosters) {
 	vector<Node> remaining_boosters = boosters;
 
 	string result;
-	while (remaining_boosters.size() > 0) {
+	for (const auto &booster:boosters) {
 		Bfs<Graph> bfs(nav_select.navigating_nav->graph);
 		Bfs<Graph>::DistMap dist(nav_select.navigating_nav->graph);
 		Bfs<Graph>::PredMap predmap(nav_select.navigating_nav->graph);
@@ -373,18 +374,10 @@ string agent::collect_boosters(vector<Node> &boosters) {
 		bfs.processedMap(processedmap);
 		bfs.reachedMap(reachedmap);
 
-		bfs.init();
-		bfs.addSource(nav_select.navigating_nav->from_full_graph_nodes[robot_pos]);
-		Node arrival = INVALID;
-		while (!bfs.emptyQueue() && arrival == INVALID) {
-			Node n = bfs.processNextNode();
-			auto found_index = find(remaining_boosters.begin(), remaining_boosters.end(), n);
-			if (found_index != remaining_boosters.end()) {
-				arrival = *found_index;
-				remaining_boosters.erase(found_index);
-			}
-		}
-		auto path = bfs.path(arrival);
+		//bfs.init();
+		//bfs.addSource(nav_select.navigating_nav->from_full_graph_nodes[robot_pos]);
+		bfs.run(nav_select.navigating_nav->from_full_graph_nodes[robot_pos], booster);
+		auto path = bfs.path(booster);
 		vector<Arc> path_forward;
 		path_forward.reserve(path.length());
 		for (Bfs<Graph>::Path::RevArcIt e(path); e != INVALID; ++e) {

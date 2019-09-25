@@ -73,7 +73,7 @@ int main(int argc, char** argv) {
 		ostringstream padded_filename;
 		navigator_factory navigators(instance);
 
-		agent ag(navigators, navigators.full_nav.initialNode);
+		agent ag(navigators);
 		renderer render(instance);
 
 		status.ag = &ag;

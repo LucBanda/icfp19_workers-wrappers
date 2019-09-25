@@ -22,7 +22,6 @@ class genetic_optimizer {
 	bool verbose = false;
 	agent &base_agent;
 
-	string filename;
 	mineGraph *navigator;
 	vector<vector<Node>> zones;
 	map<int, vector<Node>> nodes_per_degree;

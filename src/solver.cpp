@@ -43,10 +43,10 @@ int main(int argc, char** argv) {
 	int population1 = 300;
 	int population2 = 500;
 	int population3 = 1000;
-	int gInstance = 150;
+	int gInstance = 20;
 	int region_size = 50;
 	bool perform_partitionning = false;
-	bool perform_ordering = false;
+	bool perform_ordering = true;
 	bool perform_optimization = false;
 	bool verbose = false;
 	int popu;
@@ -173,77 +173,25 @@ int main(int argc, char** argv) {
 				parse_split("./results/split-" + to_string(gInstance) + ".txt");
 			vector<vector<Node>> previous_solution =
 				nav.node_from_coords(solution_pos);
+			agent ag(navigators);
 
-			cout << "************ ORDERING ****************" << endl;
+			cout << "************ OPTIMIZING ****************" << endl;
 			timer.tic();
-			genetic_orderer orderer(navigators, previous_solution);
-			orderer.verbose = verbose;
-			vector<vector<Node>> ordered_solution = orderer.solve(population2);
+			genetic_orderer orderer(ag, previous_solution);
+			orderer.verbose = true;
+			orderer.solve(population2);
 
-			cout << "instance " << gInstance
-				<< ": order found = " << timer.toc() << " s" << endl;
-			vector<vector<position>> solution = nav.list_of_coords_from_nodes(ordered_solution);
-			ofstream output_file;
-			output_file.open("./results/order-" + to_string(gInstance) + ".txt",
-							std::ofstream::trunc);
+			/*std::ofstream output_file;
+			//cout << "instance " << gInstance << ", " << i+1 << "/" << zone_list.size() << ", total score = " << orderer.score << endl;
 
-			cout << "sizes = ";
-			for (const auto &zone : solution) cout << zone.size() << " ";
-			cout << endl;
-			for (const auto &zone : solution) {
-				for (const auto &point : zone)
-					output_file << "(" << point.real() << "," << point.imag()
-								<< ")/";
-				output_file << endl;
-			}
-
-			output_file.flush();
-			output_file.close();
-		}
-		int score;
-		if (perform_optimization) {
-			cout << "************ SOLVING ****************" << endl;
-			vector<vector<position>> zone_list =
-				parse_split("./results/order-" + to_string(gInstance) + ".txt");
-			string solution_str = "";
-			agent ag(navigators, navigators.full_nav.initialNode);
-			vector<Node> manipulator_boosters;
-			for (NodeIt node(ag.nav_select.navigating_nav->graph); node!= INVALID; ++node) {
-				if (ag.boosters_map[ag.nav_select.navigating_nav->to_full_graph_nodes[node]] == MANIPULATOR)
-					manipulator_boosters.push_back(node);
-			}
-
-			string beginning = ag.collect_boosters(manipulator_boosters);
-			for (int i = 0; i < zone_list.size(); i++) {
-				genetic_optimizer optimizer(gInstance, ag, zone_list, i,
-											solution_str);
-				optimizer.verbose = verbose;
-				string sol = optimizer.solve(population3);
-				solution_str += sol;
-				ag.execute_seq(sol);
-				std::ofstream output_file;
-				output_file.open("./results/" + to_string(gInstance) + ".txt",
-								std::ofstream::trunc);
-				output_file << beginning + solution_str << endl;
-				output_file.flush();
-				output_file.close();
-				cout << "instance " << gInstance << ", " << i+1 << "/" << zone_list.size() << ", total score = " << optimizer.score << endl;
-				score = optimizer.score;
-			}
-			std::ofstream output_file;
 			ostringstream score_filename;
 			score_filename << "./scores_new_optimizer/" << gInstance << "_s" << region_size <<
-							  "_p" << population1 << "_p" << population2 << "_p" << population3 << "_"<< score;
+							  "_p" << population1 << "_p" << population2 << "_p" << population3 << "_"<< orderer.score;
 			output_file.open(score_filename.str(),
 							std::ofstream::trunc);
 			output_file << solution_str << endl;
 			output_file.flush();
-			output_file.close();
-			output_file.open("./testbench/" + testbench_identifier + ".txt",
-							std::ofstream::app);
-			output_file << "instance " << gInstance << ", time = " << main_timer.toc() << ", total size = " << solution_str.length() << "  " << solution_str << endl;
-			//output_file << solution_str << endl;
-			output_file.close();
+			output_file.close();*/
 		}
 		cout << endl;
 	}

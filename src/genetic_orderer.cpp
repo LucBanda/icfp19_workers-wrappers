@@ -20,32 +20,73 @@ using std::cout;
 using std::endl;
 using std::string;
 
-//static int randomfunc(int j) { return rand() % j; }
+static int randomfunc(int j) { return rand() % j; }
 
 // this initializes the genes, generating a random shuffle of node orders
 void genetic_orderer::init_genes(MySolution& p,
 								 const std::function<double(void)>& rnd01) {
 
-	for (int i = 0; i < node_list.size(); i++) {
-		p.params.push_back((int)(rnd01() * 10.));
+	//init booster order
+	for (NodeIt node(base_agent.nav_select.navigating_nav->graph); node!= INVALID; ++node) {
+		if (base_agent.nav_select.navigating_nav->boosters_map[node] == MANIPULATOR)
+			p.booster_order.push_back(node);
 	}
+	random_shuffle(p.booster_order.begin(), p.booster_order.end(), randomfunc);
 
+	//init choices for zone walk
+	vector<int> choices;
+	for (int i = 0; i < countNodes(graph); i++)
+		p.zone_choice.push_back((int)(rnd01() * 10.));
+
+	//init zones
+	for (SmartGraph::NodeIt zone(graph); zone != INVALID; ++zone) {
+		vector<Node> list_node = zone_to_masked_nodes[zone];
+
+		p.node_order[zone].reserve(list_node.size());
+		for (int i = 1; i <= 4; i++) {
+			if (nodes_per_degree[zone].find(i) != nodes_per_degree[zone].end()) {
+				vector<Node> list_per_degree = nodes_per_degree[zone][i];
+				random_shuffle(list_per_degree.begin(), list_per_degree.end(), randomfunc);
+				for (const auto& node:list_per_degree) {
+					orientation orient;
+					if (i == 1) {
+						for (Graph::InArcIt it(base_agent.nav_select.navigating_nav->graph, node); it!=INVALID; ++it) {
+							switch (base_agent.nav_select.navigating_nav->direction_map[it]) {
+								case 'D': orient = EAST; break;
+								case 'W': orient = NORTH; break;
+								case 'S': orient = SOUTH; break;
+								case 'A': orient = WEST; break;
+							}
+						}
+					} else {
+						orient = NORTH/*(orientation)(rnd01() * 4)*/;
+					}
+					p.node_order[zone].emplace_back(node, orient);
+				}
+			}
+		}
+	}
+	//}
 }
 
-int genetic_orderer::execute_sequence(const genetic_orderer::MySolution &p, vector<SmartGraph::Node> *result) {
-
-	int result_score = 0;
+pair<int, string> genetic_orderer::execute_sequence(const genetic_orderer::MySolution &p) {
+	string result_str;
+	agent ag(base_agent);
 
 	SmartGraph::NodeMap<bool> filled(graph, false);
 	SmartGraph::EdgeMap<int>  length(graph, 1);
 
+	result_str = ag.collect_boosters(p.booster_order);
+
 	//start with start node
-	result_score = 0;
-	result->push_back(starting_node);
-	filled[starting_node] = true;
-	SmartGraph::Node current_node = starting_node;
+	SmartGraph::Node current_node = masked_node_to_zone[ag.navigators.masked_nav.from_full_graph_nodes[ag.robot_pos]] ;
+
 	int step = 0;
-	int zones_to_fill = node_list.size();
+	int zones_to_fill = countNodes(graph);
+	//filled[current_node] = true;
+	result_str += ag.execution_map_from_node_list(p.node_order.at(current_node));
+	filled[current_node] = true;
+	zones_to_fill--;
 
 	while (zones_to_fill) {
 		//find bfs next nodes which are not filled
@@ -94,19 +135,16 @@ int genetic_orderer::execute_sequence(const genetic_orderer::MySolution &p, vect
 		SmartGraph::Node nextZone;
 		int size_candidates = final_candidates.size();
 		if (size_candidates > 1) {
-			nextZone = final_candidates[p.params[step++]%size_candidates];
+			nextZone = final_candidates[p.zone_choice[step++]%size_candidates];
 		} else {
 			nextZone = final_candidates[0];
 		}
-		result_score += dist[nextZone];
 		filled[nextZone] = true;
-		result->push_back(nextZone);
 		zones_to_fill--;
 		current_node = nextZone;
-
+		result_str += ag.execution_map_from_node_list(p.node_order.at(current_node));
 	}
-	return result_score;
-
+	return make_pair(ag.time_step, result_str);
 }
 
 // evaluate the solution by walking through edges and adding distances.
@@ -116,8 +154,8 @@ int genetic_orderer::execute_sequence(const genetic_orderer::MySolution &p, vect
 // other calculation should be done for drill if supported
 bool genetic_orderer::eval_solution(const genetic_orderer::MySolution& p,
 									MyMiddleCost& c) {
-	vector<SmartGraph::Node> result;
-	c.objective1 = execute_sequence(p, &result);
+	string str;
+	c.objective1 = execute_sequence(p).first;
 	return true;
 }
 
@@ -127,10 +165,56 @@ genetic_orderer::MySolution genetic_orderer::mutate(
 	const std::function<double(void)>& rnd01, double shrink_scale) {
 
 	MySolution X_new = X_base;
+	int nb_of_mutations = max(1, (int)(100. * rnd01() * shrink_scale));
 
-	//int swap1 = rnd01() * X_new.split.size();
-	int mutate_gene = rnd01() * X_new.params.size();
-	X_new.params[mutate_gene] = max(0, (int)(-2 + 2 * rnd01()));
+	for (int i = 0; i < nb_of_mutations; i++) {
+		double action = rnd01();
+		if (action < 0.05 && X_new.booster_order.size() > 1) { // 5% of chance to mutate boost order
+			int swap1 = rnd01() * X_new.booster_order.size();
+			int swap2 = rnd01() * X_new.booster_order.size();
+			while (swap1 == swap2) {
+				swap1 = rnd01() * X_new.booster_order.size();
+				swap2 = rnd01() * X_new.booster_order.size();
+			}
+			iter_swap(X_new.booster_order.begin() + swap1, X_new.booster_order.begin() + swap2);
+		} else if (action < 0.1) { // 5% chances to mutate choices of zones
+			int mutate_gene = rnd01() * X_new.zone_choice.size();
+			X_new.zone_choice[mutate_gene] = max(0, (int)(-2 + 2 * rnd01()));
+		} else {// 90% of chances to mutate the zones
+			int node_id_to_mutate = rnd01() * countNodes(graph);
+			SmartGraph::Node zone_to_mutate;
+			for (SmartGraph::NodeIt it(graph); it != INVALID; ++it) {
+				node_id_to_mutate--;
+				if (node_id_to_mutate < 0) {
+					zone_to_mutate = it;
+					break;
+				}
+			}
+			if (action < 0.55) {
+				int swap1 = 0;
+				int swap2 = 0;
+				while (swap1 == swap2) {
+					swap1 = rnd01() * X_new.node_order[zone_to_mutate].size();
+					swap2 = rnd01() * X_new.node_order[zone_to_mutate].size();
+				}
+
+				int minswap = min(swap1, swap2);
+				int maxswap = max(swap1, swap2);
+				reverse(X_new.node_order[zone_to_mutate].begin() + minswap, X_new.node_order[zone_to_mutate].begin() + maxswap);
+			} else {
+				int nb_of_direction_changes = max(1, (int)(10. * rnd01() * shrink_scale));
+				for (int i = 0; i < nb_of_direction_changes; i++) {
+					int swap1 = rnd01() * X_new.node_order[zone_to_mutate].size();
+					pair<Node, orientation> node = X_new.node_order[zone_to_mutate][swap1];
+					orientation new_orient = (orientation)(
+						(node.second + (int)(4. * rnd01())) % 4);
+					X_new.node_order[zone_to_mutate].erase(X_new.node_order[zone_to_mutate].begin() + swap1);
+					X_new.node_order[zone_to_mutate].emplace(X_new.node_order[zone_to_mutate].begin() + swap1, node.first,
+											new_orient);
+				}
+			}
+		}
+	}
 	return X_new;
 }
 
@@ -141,13 +225,90 @@ genetic_orderer::MySolution genetic_orderer::crossover(
 	const genetic_orderer::MySolution& X2,
 	const std::function<double(void)>& rnd01) {
 
-	int split = rnd01() * X1.params.size();
+	//cross over zone choice easily
+	int split = rnd01() * X1.zone_choice.size();
 	genetic_orderer::MySolution X_new;
 
-	X_new.params.insert(X_new.params.begin(), X1.params.begin(), X1.params.begin() + split);
-	X_new.params.insert(X_new.params.begin() + split, X2.params.begin() + split, X2.params.end());
-	//X_new.split.reserve(X1.split.size());
+	X_new.zone_choice.insert(X_new.zone_choice.begin(), X1.zone_choice.begin(), X1.zone_choice.begin() + split);
+	X_new.zone_choice.insert(X_new.zone_choice.begin() + split, X2.zone_choice.begin() + split, X2.zone_choice.end());
 
+	//XCO for booster list
+	if (X_new.booster_order.size() > 1) {
+		X_new.booster_order.reserve(X1.booster_order.size());
+		int position1 = rnd01() * X1.booster_order.size();
+		int position2 = rnd01() * X1.booster_order.size();
+		while (position1 == position2) {
+			position1 = rnd01() * X1.booster_order.size();
+			position2 = rnd01() * X1.booster_order.size();
+		}
+		int positionmin = min(position1, position2);
+		int positionmax = max(position1, position2);
+		vector<Node> nodes_to_check;
+		nodes_to_check.reserve(X1.booster_order.size());
+
+		for (int i = positionmin; i < positionmax; i++) {
+			X_new.booster_order.push_back(X1.booster_order[i]);
+			nodes_to_check.push_back(X1.booster_order[i]);
+		}
+		int j = positionmax;
+		while (1) {
+			Node node = X2.booster_order[j++];
+			if (j == (int)X1.booster_order.size()) j = 0;
+			int i = X2.booster_order.size();
+			while (find(nodes_to_check.begin(), nodes_to_check.end(), node) !=
+					nodes_to_check.end() &&
+				i) {
+				i--;
+				node = X2.booster_order[j++];
+				if (j == (int)X1.booster_order.size()) j = 0;
+			}
+			if (i == 0) break;
+			X_new.booster_order.push_back(node);
+			nodes_to_check.push_back(node);
+		}
+	} else X_new.booster_order = X1.booster_order;
+
+	//XCO each zones
+	for (SmartGraph::NodeIt zone(graph); zone != INVALID; ++zone) {
+	/*	X_new.node_order[zone].reserve(X1.node_order.at(zone).size());
+		int position1 = rnd01() * X1.node_order.at(zone).size();
+		int position2 = rnd01() * X1.node_order.at(zone).size();
+		while (position1 == position2) {
+			position1 = rnd01() * X1.node_order.at(zone).size();
+			position2 = rnd01() * X1.node_order.at(zone).size();
+		}
+		int positionmin = min(position1, position2);
+		int positionmax = max(position1, position2);
+		vector<Node> nodes_to_check;
+		nodes_to_check.reserve(X1.node_order.at(zone).size());
+
+		for (int i = positionmin; i < positionmax; i++) {
+			X_new.node_order[zone].push_back(X1.node_order.at(zone)[i]);
+			nodes_to_check.push_back(X1.node_order.at(zone)[i].first);
+		}
+		int j = positionmax;
+		while (1) {
+			pair<Node, orientation> node = X2.node_order.at(zone)[j++];
+			if (j == (int)X1.node_order.at(zone).size()) j = 0;
+			int i = X2.node_order.at(zone).size();
+			while (find(nodes_to_check.begin(), nodes_to_check.end(), node.first) !=
+					nodes_to_check.end() &&
+				i) {
+				i--;
+				node = X2.node_order.at(zone)[j++];
+				if (j == (int)X1.node_order.at(zone).size()) j = 0;
+			}
+			if (i == 0) break;
+			X_new.node_order[zone].push_back(node);
+			nodes_to_check.push_back(node.first);
+		}*/
+		double which_one = rnd01();
+		if (which_one < 0.5) {
+			X_new.node_order[zone] = X1.node_order.at(zone);
+		} else {
+			X_new.node_order[zone] = X2.node_order.at(zone);
+		}
+	}
 
 	return X_new;
 }
@@ -171,67 +332,46 @@ void genetic_orderer::SO_report_generation(
 		 //<< "genes size=" << best_genes.to_string(this) << ", "
 		 << "Exe_time=" << last_generation.exe_time << endl;
 
+	ofstream output_file;
+	output_file.open("./results/" + to_string(base_agent.navigators.instance) + ".txt",
+					std::ofstream::trunc);
+	output_file << best_genes.to_string(this) << endl;
+	output_file.flush();
+	output_file.close();
+
 }
 
-genetic_orderer::genetic_orderer(navigator_factory& arg_navigators,
+genetic_orderer::genetic_orderer(agent &arg_base_agent,
 								 vector<vector<Node>>& zones)
-	: navigators(arg_navigators),
-	  submine_to_mine_nodes(graph),
-	  boosters_map(graph),
-	  cost(graph)
+	: base_agent(arg_base_agent),
+	  zone_to_masked_nodes(graph),
+	  masked_node_to_zone(base_agent.navigators.masked_nav.graph)
 	 {
 
-	agent ag(arg_navigators,navigators.full_nav.initialNode);
-	vector<Node> manipulator_boosters;
-	for (NodeIt node(ag.nav_select.navigating_nav->graph); node!= INVALID; ++node) {
-		if (ag.boosters_map[ag.nav_select.navigating_nav->to_full_graph_nodes[node]] == MANIPULATOR)
-			manipulator_boosters.push_back(node);
-	}
-	ag.collect_boosters(manipulator_boosters);
-	Node start_after_boosters = navigators.masked_nav.from_full_graph_nodes[ag.robot_pos];
-
-	masked_navigator &nav = navigators.masked_nav;
 	struct timeval time;
 	gettimeofday(&time, NULL);
 	srand((time.tv_sec) + (time.tv_usec));
-	//make the map from node of original graph to zone
-	Graph::NodeMap<vector<Node>> node_to_zone_map(nav.graph);
-	for (const auto zone:zones) {
-		for (const auto &node:zone) {
-			node_to_zone_map[node] = zone;
-		}
-	}
-	// calculate the starting zone by applying dijstra between center nodes and
-	// starting point
-	vector<Node> start_zone;
-	for (const auto &zone : zones) {
-		if (find(zone.begin(), zone.end(), start_after_boosters) != zone.end()) {
-			start_zone = zone;
-		}
-	}
 
-	// create graph of zones
+// create graph of zones
 	for (const auto &zone : zones) {
 		SmartGraph::Node u = graph.addNode();
-		submine_to_mine_nodes[u] = zone;
-		if (zone != start_zone) {
-			node_list.push_back(u);
+		zone_to_masked_nodes[u] = zone;
+		for (const auto node:zone) {
+			masked_node_to_zone[node] = u;
 		}
-		else
-			starting_node = u;
-		boosters_map[u] = nav.boosters_in_node_list(zone);
 	}
+	//masked_navigator &nav = base_agent.navigators.masked_nav;
 
 	// calculate adjacent zones with bfs from the center
 	for (SmartGraph::NodeIt orig(graph); orig != INVALID; ++orig) {
-		set<vector<Node>> neighbors;
-		for (const auto &node:submine_to_mine_nodes[orig]) {
+		set<SmartGraph::Node> neighbors;
+		for (const auto &node:zone_to_masked_nodes[orig]) {
 			//iterate over all cell of zone, if a neighbor of the cell is not in the current zone, find the zone of the neigbor
-			for(Graph::OutArcIt arc(nav.graph, node); arc != INVALID; ++arc) {
-				auto arc_target = nav.graph.target(arc);
-				if (find(submine_to_mine_nodes[orig].begin(), submine_to_mine_nodes[orig].end(), arc_target) == submine_to_mine_nodes[orig].end()) {
+			for(Graph::OutArcIt arc(base_agent.navigators.masked_nav.graph, node); arc != INVALID; ++arc) {
+				auto arc_target = base_agent.navigators.masked_nav.graph.target(arc);
+				if (find(zone_to_masked_nodes[orig].begin(), zone_to_masked_nodes[orig].end(), arc_target) == zone_to_masked_nodes[orig].end()) {
 					//neighbor found
-					auto res = node_to_zone_map[arc_target];
+					auto res = masked_node_to_zone[arc_target];
 					neighbors.insert(res);
 				}
 			}
@@ -239,16 +379,15 @@ genetic_orderer::genetic_orderer(navigator_factory& arg_navigators,
 		//populate edges from neighbors
 		for (const auto &nb:neighbors) {
 			for (SmartGraph::NodeIt dest(graph); dest!= INVALID; ++dest) {
-				if (submine_to_mine_nodes[dest] == nb) {
-					SmartGraph::Edge e = graph.addEdge(orig, dest);
-					Bfs<Graph> bfs(nav.graph);
-					bfs.run(submine_to_mine_nodes[orig][0],
-								submine_to_mine_nodes[dest][0]);
-					int cost_score = bfs.dist(submine_to_mine_nodes[dest][0]);
-					cost[e] = cost_score;
+				if (dest == nb) {
+					graph.addEdge(orig, dest);
 				}
 			}
 		}
+	}
+	for (NodeIt node(base_agent.navigators.masked_nav.graph); node != INVALID; ++node) {
+		int degree = countOutArcs(base_agent.navigators.masked_nav.graph, node);
+		nodes_per_degree[masked_node_to_zone[node]][degree].push_back(node);
 	}
 }
 
@@ -257,7 +396,7 @@ genetic_orderer::~genetic_orderer() {}
 
 // here we apply genetic algorithm to the population of pathes between all
 // centers the goal is to determine the shortest path going through all zones
-vector<vector<Node>> genetic_orderer::solve(int population_size) {
+string genetic_orderer::solve(int population_size) {
 	using namespace std::placeholders;
 
 	EA::Chronometer timer;
@@ -288,7 +427,7 @@ vector<vector<Node>> genetic_orderer::solve(int population_size) {
 	ga_obj.mutation_rate = 0.3;
 	ga_obj.best_stall_max = 200;
 	ga_obj.average_stall_max = 5;
-	ga_obj.elite_count = 20;
+	ga_obj.elite_count = 30;
 	ga_obj.use_quick_search = population_size < 6000;
 
 	ga_obj.solve();
@@ -297,14 +436,5 @@ vector<vector<Node>> genetic_orderer::solve(int population_size) {
 	auto seq = ga_obj.last_generation
 			.chromosomes[ga_obj.last_generation.best_chromosome_index]
 			.genes;
-	vector<SmartGraph::Node> seq_result;
-	execute_sequence(seq, &seq_result);
-
-	seq_result.insert(seq_result.begin(), starting_node);
-
-	vector<vector<Node>> result;
-	for (const auto &n : seq_result) {
-		result.push_back(submine_to_mine_nodes[n]);
-	}
-	return result;
+	return seq.to_string(this);
 }

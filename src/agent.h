@@ -22,7 +22,7 @@ class agent {
 	int owned_fast_wheels = 0;
 	int owned_drill = 0;
 
-	agent(navigator_factory &arg_navigator, Node start);
+	agent(navigator_factory &arg_navigator);
 	agent(agent &ag);
 	virtual ~agent();
 
@@ -37,7 +37,7 @@ class agent {
 	void paint_valid_nodes();
 	vector<vector<position>> relative_manipulators;
 
-	string collect_boosters(vector<Node> &boosters);
+	string collect_boosters(const vector<Node> &boosters);
 	string execution_map_from_zones(const vector<vector<pair<Node, orientation>>> &oriented_zones);
 
 };

@@ -9,14 +9,13 @@
 
 class genetic_orderer {
 	struct MySolution {
-		vector<int> params;
+		vector<int> zone_choice;
+		vector<Node> booster_order;
+		map<SmartGraph::Node, vector<pair<Node, orientation>>> node_order;
 
 		string to_string(genetic_orderer* optim) const {
-			ostringstream res;
-			for (const auto &it : params) {
-				res << it << " / ";
-			}
-			return res.str();
+			auto result = optim->execute_sequence(*this);
+			return result.second;
 		}
 	};
 
@@ -31,24 +30,20 @@ class genetic_orderer {
 
    public:
 	SmartGraph graph;
-	navigator_factory &navigators;
-	vector<vector<Node>> zones;
-	string output_filename;
+	agent &base_agent;
 
-	SmartGraph::NodeMap<vector<Node>> submine_to_mine_nodes;
-	SmartGraph::NodeMap<vector<Booster>> boosters_map;
-	//SmartGraph::NodeMap<vector<Booster>> boosters_map;
-	SmartGraph::EdgeMap<int> cost;
-	vector<SmartGraph::Node> node_list;
-	SmartGraph::Node starting_node;
+	SmartGraph::NodeMap<vector<Node>> zone_to_masked_nodes;
+	Graph::NodeMap<SmartGraph::Node> masked_node_to_zone;
+	map<SmartGraph::Node, map<int, vector<Node>>> nodes_per_degree;
 	bool verbose;
 
-	genetic_orderer(navigator_factory& arg_navigators, vector<vector<Node>> &arg_zones);
+	genetic_orderer(agent &arg_base_agent, vector<vector<Node>> &arg_zones);
 	~genetic_orderer();
-	vector<vector<Node>> solve(int population_size);
+	string solve(int population_size);
+	int score;
 
    private:
-	int execute_sequence(const genetic_orderer::MySolution &p, vector<SmartGraph::Node>* result = NULL);
+	pair<int, string> execute_sequence(const genetic_orderer::MySolution &p);
 	bool eval_solution(const genetic_orderer::MySolution& p,
 					   genetic_orderer::MyMiddleCost& c);
 	void init_genes(genetic_orderer::MySolution& p,
